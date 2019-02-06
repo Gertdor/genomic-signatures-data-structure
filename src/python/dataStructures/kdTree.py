@@ -14,7 +14,7 @@ class KdNode:
 
 class KdTree:
 
-    def createKdTree(values, depth):    
+    def createKdTree(values, depth = 0):
         if(len(values) == 0):
             return(None)
 

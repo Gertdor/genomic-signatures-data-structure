@@ -13,4 +13,4 @@ class Point(Element):
         return(self.value[axis]-other[axis])
 
     def distance(self, other):
-        return(np.linalg.norm(self.value-other,ord=1))
+        return(np.linalg.norm(self.value-other))
