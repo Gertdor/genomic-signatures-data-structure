@@ -26,8 +26,21 @@ class VPTree:
         right = VPTree.createVPTree(rightValues)
         return(VPTreeNode(currentNodeValue, threshold, left, right))
     
-    def printTree(tree):
-        raise NotImplementedError("TODO")
+    def toJson(tree, level = 0):
+        if(tree == None):
+            print("None", end='')
+        else:
+            indent = "  "*level
+            print("{")
+            print(indent,"value:",tree.value.value,',', sep='')
+            print(indent,"threshold:",tree.threshold,',', sep='')
+            print(indent,"left:", end='',sep='')
+            VPTree.toJson(tree.left, level + 1)
+            print(",")
+            print(indent,"right:", end='',sep='')
+            VPTree.toJson(tree.right, level + 1)
+            print()
+            print(indent,"}", end='',sep='')
 
     def nearestNeighbour(tree, point):
         bestDist = tree.value.distance(point)
