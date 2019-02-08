@@ -5,13 +5,14 @@ from VPTreeElement import VPTreeElement
 
 # Should generate a large tree.
 # Tests so that i can store any value.
-numberList = [VPTreeElement(np.array([randint(1,11),randint(1,11)])) for x in range(25)]
+numberList = [VPTreeElement(np.array([randint(1,101),randint(1,101),randint(1,101)])) for x in range(10000)]
 a = VPTree.createVPTree(numberList)
+(NN, dist, ops) = VPTree.nearestNeighbour(a,VPTreeElement(np.array([50,2,17])))
+print(ops)
 
 # Specific tree with known structure
-#a = KdTree.createKdTree([Point(np.array([1,3])),Point(np.array([2,5])),Point(np.array([3,3]))],0)
-#KdTree.printTree(a)
-#(NN, dist) = KdTree.findNearestNeighbour(a,[2,3])
+a = VPTree.createVPTree([VPTreeElement(np.array([1,3])),VPTreeElement(np.array([2,5])),VPTreeElement(np.array([3,3]))])
+(NN, dist, ops) = VPTree.nearestNeighbour(a,VPTreeElement(np.array([2,3])))
 #NN.value.print()
-#print(dist)
-#a = VPTree.createVPTree(np.array(
+print(dist)
+
