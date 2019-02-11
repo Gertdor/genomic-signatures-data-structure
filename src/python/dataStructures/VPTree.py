@@ -1,4 +1,6 @@
 from operator import itemgetter
+from sys import float_info
+import heapq
 
 class VPTreeNode:
     def __init__(self, value, threshold, left, right):
@@ -42,32 +44,55 @@ class VPTree:
             print()
             print(indent,"}", end='',sep='')
 
-    def nearestNeighbour(tree, point):
-        bestDist = tree.value.distance(point)
-        return(VPTree.NNS(tree, point, tree, bestDist, 0))
+    # Heaps are min heaps, as such the negative dist is stored
+    # Assumes distance is non-negative, if not this does not work
+    def nearestNeighbour(tree, point, k = 1):
+        dist = tree.value.distance(point)
+        if(k==1):
+            cutOffDist = dist
+            bestNodes = [(dist,tree)]
+        else:
+            bestNodes = [(float_info.max, None) for i in range(k-1)]
+            bestNodes.append((dist, tree))
+            cutOffDist = float_info.max
+        return(VPTree.NNS(tree, point, bestNodes, cutOffDist, 0))
 
-    def NNS(currentNode, point, bestNode, bestDist, ops):
+    def NNS(currentNode, point, bestNodes, cutOffDist, ops):
         if(currentNode == None):
-            return(bestNode, bestDist, ops)
+            return(bestNodes, cutOffDist, ops)
         ops = ops + 1
         distance = currentNode.value.distance(point)
-        if(distance < bestDist):
-            bestDist = distance
-            bestNode = currentNode
+        if(distance < cutOffDist):
+            (maxDist,currentIndex) = VPTree.knnMax(bestNodes)
+            bestNodes[currentIndex] = (distance, currentNode)
+            (cutOffDist, currentIndex) = VPTree.knnMax(bestNodes)
 
         # Might be faster without this
         if(currentNode.left == None and currentNode.right == None):
-            return(bestNode, bestDist, ops)
+            return(bestNodes, cutOffDist, ops)
        
         if(distance < currentNode.threshold):
-            if(distance- bestDist < currentNode.threshold):
-                (bestNode, bestDist, ops) = VPTree.NNS(currentNode.left, point, bestNode, bestDist, ops)
-            if(distance + bestDist > currentNode.threshold):
-                (bestNode, bestDist, ops) = VPTree.NNS(currentNode.right, point, bestNode, bestDist, ops)
+            if(distance - cutOffDist < currentNode.threshold):
+                (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
+            if(distance + cutOffDist > currentNode.threshold):
+                (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
         else:
-            if(distance + bestDist > currentNode.threshold):
-                (bestNode, bestDist, ops) = VPTree.NNS(currentNode.right, point, bestNode, bestDist, ops)
-            if(distance - bestDist < currentNode.threshold):
-               (bestNode, bestDist, ops) = VPTree.NNS(currentNode.left, point, bestNode, bestDist, ops)
+            if(distance + cutOffDist > currentNode.threshold):
+                (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
+            if(distance - cutOffDist < currentNode.threshold):
+               (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
 
-        return(bestNode, bestDist, ops)
+        return(bestNodes, cutOffDist, ops)
+
+
+    def knnMax(nodeList):
+        length = len(nodeList)
+        if(len==1):
+            return(nodeList[0][0],0)
+        maxDist = 0
+        currentIndex = 0
+        for i in range(length):
+            if(maxDist < nodeList[i][0]):
+                maxDist = nodeList[i][0]
+                currentIndex = i
+        return(maxDist, currentIndex)
