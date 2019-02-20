@@ -1,6 +1,6 @@
-from kdTree import KdTree
+from dataStructures.kdTree import KdTree
 from random import randint
-from pointElement import Point
+from dataStructures.pointElement import Point
 
 import numpy as np
 

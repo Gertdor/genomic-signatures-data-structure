@@ -1,14 +1,19 @@
-from VPTree import VPTree
+from dataStructures.VPTree import VPTree
 import numpy as np
 from random import randint, seed
-from VPTreeElement import VPTreeElement
+from dataStructures.VPTreeElement import VPTreeElement
+
+import cProfile
 
 k=1
 
-numberList = [VPTreeElement(np.array([randint(1,101),randint(1,101),randint(1,101)])) for x in range(10000)]
+numberList = [VPTreeElement(np.array([randint(1,101),randint(1,101),randint(1,101)])) for x in range(5000)]
 tree = VPTree.createVPTree(numberList)
 elementToCompare = VPTreeElement(np.array([50,2,17]))
+
 (NN, dist, ops) = VPTree.nearestNeighbour(tree,elementToCompare,k)
+#cProfile.run('VPTree.nearestNeighbour(tree,elementToCompare,k)')
+
 distances = [(elementToCompare.distance(x), x) for x in numberList]
 distances.sort(key=lambda x: x[0])
 NN.sort(key=lambda x:x[0])
