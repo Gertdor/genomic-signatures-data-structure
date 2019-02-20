@@ -1,5 +1,6 @@
 from operator import itemgetter
 from sys import float_info
+from random import randint
 import heapq
 
 class VPTreeNode:
@@ -17,7 +18,11 @@ class VPTree:
         if(len(values)==1):
             return(VPTreeNode(values[0],0,None,None))
         # TODO there might be a smarter way to select this element
-        currentNodeValue = values[0]
+        index = randint(0,len(values)-1)
+        currentNodeValue = values[index]
+        tmp = values[0]
+        values[0] = values[index]
+        values[index] = tmp
         distances = [(currentNodeValue.distance(x), x) for x in values[1:]]
         distances.sort(key=itemgetter(0))
         median = len(distances)//2
@@ -44,8 +49,6 @@ class VPTree:
             print()
             print(indent,"}", end='',sep='')
 
-    # Heaps are min heaps, as such the negative dist is stored
-    # Assumes distance is non-negative, if not this does not work
     def nearestNeighbour(tree, point, k = 1):
         dist = tree.value.distance(point)
         if(k==1):

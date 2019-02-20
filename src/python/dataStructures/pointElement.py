@@ -1,5 +1,5 @@
 import numpy as np
-from element import Element
+from dataStructures.element import Element
 
 class Point(Element):
 
