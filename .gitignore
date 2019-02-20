@@ -1,3 +1,6 @@
+# Project specific
+.ycm*
+*.tmp
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
