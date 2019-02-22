@@ -1,9 +1,12 @@
 from operator import itemgetter
 from sys import float_info
 from random import randint
+
 import heapq
+import pickle
 
 class VPTreeNode:
+    
     def __init__(self, value, threshold, left, right):
         self.value = value
         self.threshold = threshold
@@ -11,10 +14,29 @@ class VPTreeNode:
         self.right = right
     
     def __str__(self):
-        return str(VPTree.value)
+        return str(self.value)
+
+    def __eq__(self, other):
+        if(self.value!=other.value):
+            return False
+        if(self.threshold!=other.threshold):
+            return False
+        return(self.left == other.left and self.right == other.right)
+
+    def __ne__(self, other):
+        return not(self==other)
+    
 
 class VPTree:
         
+    def save(tree, fileName):
+        with open(fileName, "wb") as f:
+            pickle.dump(tree,f)
+
+    def load(fileName):
+        with open(fileName, "rb") as f:
+            return pickle.load(f)
+
     def createVPTree(values):
         if(len(values) == 0):
             return(None)
@@ -37,7 +59,7 @@ class VPTree:
         return(VPTreeNode(currentNodeValue, threshold, left, right))
     
     def toJson(tree, level = 0):
-        if(tree == None):
+        if(tree is None):
             print("None", end='')
         else:
             indent = "  "*level
@@ -64,7 +86,7 @@ class VPTree:
         return(VPTree.NNS(tree, point, bestNodes, cutOffDist, 0))
 
     def NNS(currentNode, point, bestNodes, cutOffDist, ops):
-        if(currentNode == None):
+        if(currentNode is None):
             return(bestNodes, cutOffDist, ops)
         ops = ops + 1
         distance = currentNode.value.distance(point)
@@ -74,7 +96,7 @@ class VPTree:
             (cutOffDist, currentIndex) = VPTree.knnMax(bestNodes)
 
         # Might be faster without this
-        if(currentNode.left == None and currentNode.right == None):
+        if(currentNode.left is None and currentNode.right is None):
             return(bestNodes, cutOffDist, ops)
        
         if(distance < currentNode.threshold):

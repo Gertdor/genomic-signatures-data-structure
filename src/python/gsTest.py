@@ -1,6 +1,7 @@
 import sys
 import time
 import argparse
+import pickle
 
 import numpy as np
 from scipy import stats
@@ -8,7 +9,7 @@ sys.path.append('/home/basse/Documents/skola/masterThesis/clustering-genomic-sig
 
 from clustering_genomic_signatures.util.parse_vlmcs import parse_vlmcs, add_parse_vlmc_args
 from clustering_genomic_signatures.util.parse_distance import add_distance_arguments, parse_distance_method
-from dataStructures.VPTree import VPTree
+from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VLMCElement import VPTreeVLMC
 from data_analysis.distance_analysis import distance_function_stats
@@ -34,16 +35,25 @@ def fullTree(elements):
 def partOfTree(cutoff, elements):
     numElemInTree = round(len(elements)*cutoff)
     elementsChecked = len(elements) - numElemInTree
-    tree2 = VPTree.createVPTree(elements[0:numElemInTree])
+    tree = VPTree.createVPTree(elements[0:numElemInTree])
     
     start_time = time.time()
-    NNS2 = [VPTree.nearestNeighbour(tree2, elem) for elem in elements[numElemInTree:]]
+    NNS = [VPTree.nearestNeighbour(tree, elem) for elem in elements[numElemInTree:]]
     total_time = time.time()-start_time
     print("total time:", total_time)
     print("time per element", total_time/elementsChecked)
 
-    printNNS(NNS2, elementsChecked)
-    VPTree.toJson(tree2)
+    printNNS(NNS, elementsChecked)
+
+def pickleTest(elements):
+
+    tree = VPTree.createVPTree(elements)
+    VPTree.save(tree,"test.pickle")
+    data = VPTree.load("test.pickle")
+    
+    print("The trees are equal?:", tree==data)
+    
+
 
 # Does not really work. In top ~20%
 def lowDimTree(vlmcs, vlmcElements, cutoff):
@@ -93,9 +103,11 @@ vlmcs = parse_vlmcs(args, "db_config.json")
 distance_function = parse_distance_method(args)
 elements = [VPTreeVLMC(vlmc, distance_function, vlmc.name) for vlmc in vlmcs]
 
-lowDimTree(vlmcs, elements, cutoff)
+partOfTree(cutoff, elements)
+pickleTest(elements)
+
+#lowDimTree(vlmcs, elements, cutoff)
 
 #print("number of vlmcs:", len(vlmcs))
 
 #distance_function_stats(elements)
-#partOfTree(cutoff, elements)
