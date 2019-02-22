@@ -7,10 +7,10 @@ class Point(Element):
         self.value = value
 
     def greaterThan(self, other, axis):
-        return(self.value[axis]>other[axis])
+        return(self.value[axis]>other.value[axis])
 
     def axisDist(self, other, axis):
-        return(self.value[axis]-other[axis])
+        return(self.value[axis]-other.value[axis])
 
     def distance(self, other):
-        return(np.linalg.norm(self.value-other))
+        return(np.linalg.norm(self.value-other.value))

@@ -43,12 +43,13 @@ class KdTree:
         currentNode = tree
         bestDist = tree.value.distance(point)
         bestNode = tree
-        return(KdTree.NNS(tree, point, bestNode, bestDist))
+        return(KdTree.NNS(tree, point, bestNode, bestDist, 0))
 
-    def NNS(currentNode, point, bestNode, bestDist):
+    def NNS(currentNode, point, bestNode, bestDist, distCalc):
         if(currentNode == None):
-            return(bestNode, bestDist)
+            return(bestNode, bestDist, distCalc)
         distance = currentNode.value.distance(point)
+        distCalc+=1
         axisDistance = currentNode.value.axisDist(
                 point, currentNode.axis)
         if(distance < bestDist):
@@ -63,7 +64,7 @@ class KdTree:
             near = currentNode.rightChild
             far = currentNode.leftChild
         #It cannot get worse, so this is safe.
-        (bestNode, bestDist) = KdTree.NNS(near, point, bestNode, bestDist)
+        (bestNode, bestDist, distCalc) = KdTree.NNS(near, point, bestNode, bestDist, distCalc)
         if(axisDistance*axisDistance>=bestDist*bestDist):
-            return(bestNode, bestDist)
-        return(KdTree.NNS(near, point, bestNode, bestDist))
+            return(bestNode, bestDist, distCalc)
+        return(KdTree.NNS(near, point, bestNode, bestDist, distCalc))
