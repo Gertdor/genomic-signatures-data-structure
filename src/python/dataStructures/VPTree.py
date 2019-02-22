@@ -9,6 +9,9 @@ class VPTreeNode:
         self.threshold = threshold
         self.left = left
         self.right = right
+    
+    def __str__(self):
+        return str(VPTree.value)
 
 class VPTree:
         
@@ -75,13 +78,11 @@ class VPTree:
             return(bestNodes, cutOffDist, ops)
        
         if(distance < currentNode.threshold):
-            if(distance - cutOffDist < currentNode.threshold):
-                (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
+            (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
             if(distance + cutOffDist > currentNode.threshold):
                 (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
         else:
-            if(distance + cutOffDist > currentNode.threshold):
-                (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
+            (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
             if(distance - cutOffDist < currentNode.threshold):
                (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
 
