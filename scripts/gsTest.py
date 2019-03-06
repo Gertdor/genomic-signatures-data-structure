@@ -37,15 +37,6 @@ def partOfTree(cutoff, elements):
 
     printNNS(NNS)
 
-def pickleTest(elements):
-
-    tree = VPTree.createVPTree(elements)
-    VPTree.save(tree,"test.pickle")
-    data = VPTree.load("test.pickle")
-    
-    print("The trees are equal?:", tree==data)
-    
-
 
 # Does not really work. In top ~20%
 def lowDimTree(vlmcs, vlmcElements, cutoff):
@@ -81,23 +72,16 @@ def printNNS(NNS):
     print("avg number of dist calcs", totalNumberOfActions/elementsChecked)
     print("average dist: ", totalDist/elementsChecked)
 
+
 def saveDistances(vlmcs, name):
     distances = calc_pariwise_fast(vlmcs)
     save_distances(distances, name)
+
 
 def calcOverlap(vlmcs):
     tree = VPTree.createVPTree(vlmcs, random=False)
     overlap = VPTree.overlap(tree)
     print(str(overlap))
-
-
-def testRandom(vlmcs):
-    tree1 = VPTree.createVPTree(vlmcs, random=False)
-    tree2 = VPTree.createVPTree(vlmcs, random=False)
-    tree3 = VPTree.createVPTree(vlmcs, random=True)
-
-    print("These should be true",tree1==tree2)
-    print("These should false",tree1==tree3)
 
 
 #from util.parse_vlmc import parse_vlmcs
