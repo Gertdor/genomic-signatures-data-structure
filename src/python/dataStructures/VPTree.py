@@ -36,26 +36,31 @@ class VPTree:
     def load(fileName):
         with open(fileName, "rb") as f:
             return pickle.load(f)
-
-    def createVPTree(values):
+    
+    def createVPTree(values, random=True):
         if(len(values) == 0):
             return(None)
         if(len(values)==1):
             return(VPTreeNode(values[0],0,None,None))
         # TODO there might be a smarter way to select this element
-        index = randint(0,len(values)-1)
-        currentNodeValue = values[index]
-        tmp = values[0]
-        values[0] = values[index]
-        values[index] = tmp
+        # Selects a random element and moves it to the front
+        # That way it can be used as a pivot
+        if random:
+            index = randint(0,len(values)-1)
+            values[0], values[index] =  values[index], values[0]
+
+        currentNodeValue = values[0]
         distances = [(currentNodeValue.distance(x), x) for x in values[1:]]
         distances.sort(key=itemgetter(0))
         median = len(distances)//2
         threshold = currentNodeValue.distance(distances[median][1])
         leftValues = [x[1] for x in distances[:median]]
         rightValues = [x[1] for x in distances[median:]]
-        left = VPTree.createVPTree(leftValues)
-        right = VPTree.createVPTree(rightValues)
+        left = VPTree.createVPTree(leftValues,random)
+        right = VPTree.createVPTree(rightValues,random)
+        # swap back to not change the original data
+        if random:
+            values[0], values[index] =  values[index], values[0]
         return(VPTreeNode(currentNodeValue, threshold, left, right))
     
     def toJson(tree, level = 0):
@@ -122,3 +127,21 @@ class VPTree:
                 maxDist = nodeList[i][0]
                 currentIndex = i
         return(maxDist, currentIndex)
+
+    def overlap(tree):
+        node_list=[]
+        VPTree.create_list(tree, node_list)
+        overlap=0
+        for i in range(len(node_list)):
+            current=node_list[i]
+            overlap+=sum([VPTree._overlap(current, other) for other in node_list[i:]])
+        return(overlap)
+
+    def _overlap(current, other):
+        return(int(current.value.distance(other.value) > (current.threshold + other.threshold)))
+
+    def create_list(tree, node_list):
+        if tree is not None:
+            node_list.append(tree)
+            VPTree.create_list(tree.left, node_list)
+            VPTree.create_list(tree.right, node_list)
