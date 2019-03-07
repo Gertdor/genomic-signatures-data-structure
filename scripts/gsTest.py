@@ -7,6 +7,7 @@ import numpy as np
 from scipy import stats
 sys.path.append('/home/basse/Documents/skola/masterThesis/clustering-genomic-signatures-private')
 
+from dataStructures.VPTreeElement import VPTreeElement
 from clustering_genomic_signatures.util.parse_vlmcs import parse_vlmcs, add_parse_vlmc_args
 from clustering_genomic_signatures.util.parse_distance import add_distance_arguments, parse_distance_method
 from dataStructures.VPTree import VPTree, VPTreeNode
@@ -15,19 +16,14 @@ from dataStructures.VLMCElement import VPTreeVLMC
 from data_analysis.distance_analysis import distance_function_stats
 from data_analysis.distance_function_accuracy import save_distances, load_distances, calculate_pairwise_distance, get_distance_accuracy, calc_pariwise_fast
 
-def fullTree(elements):
+def fullTree(elements, random_element, leaf_size):
+    tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
+    return(tree)
 
-    start_time = time.time()
-    tree = VPTree.createVPTree(elements)
-    NNS = [VPTree.nearestNeighbour(tree, elem) for elem in elements]
-    totalTime = time.time() - start_time
-
-    printNNS(NNS)    
-
-def partOfTree(cutoff, elements):
+def partOfTree(cutoff, elements, random, leaf_size):
     numElemInTree = round(len(elements)*cutoff)
     elementsChecked = len(elements) - numElemInTree
-    tree = VPTree.createVPTree(elements[0:numElemInTree])
+    tree = VPTree.createVPTree(elements[0:numElemInTree],random=random, max_leaf_size = leaf_size)
     
     start_time = time.time()
     NNS = [VPTree.nearestNeighbour(tree, elem) for elem in elements[numElemInTree:]]
@@ -73,45 +69,72 @@ def printNNS(NNS):
     print("average dist: ", totalDist/elementsChecked)
 
 
+def generatePointTree(args):
+    numberList = [VPTreeElement(np.random.uniform(args.min_value, args.max_value, args.dim )) for x in range(args.number_of_searches)]
+    tree = VPTree.createVPTree(numberList, args.random_vp, args.leaf_size)
+    return(tree)
+
+def number_NN(tree, args):
+    elements = [VPTreeElement(np.random.uniform(args.min_value,args.max_value, args.dim)) for x in range(args.number_of_searches)]
+    NNS = [VPTree.nearestNeighbour(tree,elem,1) for elem in elements]
+    printNNS(NNS)
+
 def saveDistances(vlmcs, name):
     distances = calc_pariwise_fast(vlmcs)
     save_distances(distances, name)
 
 
-def calcOverlap(vlmcs):
-    tree = VPTree.createVPTree(vlmcs, random=False)
+def calcOverlap(tree):
     overlap = VPTree.overlap(tree)
     print(str(overlap))
 
 
-#from util.parse_vlmc import parse_vlmcs
 parser = argparse.ArgumentParser(description="test args")
 parser.add_argument("--cutoff", type=float, default=0.5)
+parser.add_argument("--nn_test", action='store_true')
+parser.add_argument("--overlap", action='store_true')
+parser.add_argument("--low_dim_tree", action='store_true')
+parser.add_argument("--num",action='store_true')
+
+parser.add_argument("--dist_stats", action='store_true')
+parser.add_argument("--leaf_size", type=int, default=1)
+parser.add_argument("--random_vp",action='store_true')
+parser.add_argument("--print",action='store_true')
+parser.add_argument("--dim", type=int, default=5)
+parser.add_argument("--max_value", type=int, default=5)
+parser.add_argument("--min_value", type=int, default=0)
+parser.add_argument("--number_of_points", type=int, default=1000)
+parser.add_argument("--number_of_searches", type=int, default=100)
 
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
 args = parser.parse_args()
 
-cutoff = args.cutoff
 vlmcs = parse_vlmcs(args, "db_config.json")
-
-vlmcs2 = parse_vlmcs(args, "db_config.json")
-
 distance_function = parse_distance_method(args)
 elements = [VPTreeVLMC(vlmc, distance_function, vlmc.name) for vlmc in vlmcs]
 
-#calcOverlap(elements)
-#testRandom(elements)
-#calcOverlap(elements)
+if(args.overlap):
+    if(args.num):
+        point_tree = generatePointTree(args)
+        print("point tree overlap")
+        calcOverlap(point_tree)
+    else:
+        vlmc_tree = fullTree(elements,args.random_vp,args.leaf_size)
+        print("vlmc tree overlap")
+        calcOverlap(vlmc_tree)
 
-#saveDistances(elements, "data_analysis/small.pickle")
+if(args.nn_test):
+    if(args.num):
+        point_tree = generatePointTree(args)
+        number_NN(point_tree,args)
+    else:
+        cutoff = args.cutoff
+        partOfTree(cutoff, elements, args.random_vp, args.leaf_size)
 
-#partOfTree(cutoff, elements)
+if(args.low_dim_tree):
+    cutoff = args.cutoff
+    lowDimTree(vlmcs, elements, cutoff)
 
-#pickleTest(elements)
-
-#lowDimTree(vlmcs, elements, cutoff)
-
-#print("number of vlmcs:", len(vlmcs))
-
-#distance_function_stats(elements)
+if(args.dist_stats):
+    distance_function_stats(elements)

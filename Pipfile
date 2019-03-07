@@ -10,6 +10,8 @@ numpy = "*"
 scipy = "*"
 clustering-genomic-signatures = {editable = true,path = "./../clustering-genomic-signatures-private"}
 gs-data-structures = {editable = true,path = "./gs-data-structures"}
+cprofile = "*"
+bisect = "*"
 
 [requires]
 python_version = "3.7"

@@ -1,25 +1,36 @@
 from operator import itemgetter
 from sys import float_info
 from random import randint
+import numpy as np
 
 import heapq
 import pickle
 
 class VPTreeNode:
     
-    def __init__(self, value, threshold, left, right):
-        self.value = value
+    def __init__(self, vp, threshold, left, right, data=None):
+        self.vp = vp
         self.threshold = threshold
+        self.is_leaf = left is None and right is None
         self.left = left
         self.right = right
+        self.data = data
     
+    def distance(self, other):
+        return self.vp.distance(other)
+
     def __str__(self):
-        return str(self.value)
+        if(self.data is not None):
+            return str(self.vp) + str(self.data)
+        else:
+            return str(self.vp)
 
     def __eq__(self, other):
-        if(self.value!=other.value):
+        if(self.vp!=other.vp):
             return False
         if(self.threshold!=other.threshold):
+            return False
+        if(self.data != other.data):
             return False
         return(self.left == other.left and self.right == other.right)
 
@@ -37,11 +48,24 @@ class VPTree:
         with open(fileName, "rb") as f:
             return pickle.load(f)
     
-    def createVPTree(values, random=True):
+    def createVPTree(values, random=True, max_leaf_size = 1):
         if(len(values) == 0):
             return(None)
-        if(len(values)==1):
-            return(VPTreeNode(values[0],0,None,None))
+        if(len(values)<=max_leaf_size):
+            # calc distance from every node to every node
+            # select one which minimizes threshold
+            if(max_leaf_size == 1):
+                return(VPTreeNode(values[0], 0, None, None, values))
+
+            distances = [[current.distance(other) for current in values] for other in values]
+            worse_case_distances = np.max(distances, axis=0)
+            best_index = np.argmin(worse_case_distances)
+            threshold = worse_case_distances[best_index]
+
+            values_to_save = values.copy()
+            values_to_save[0], values_to_save[best_index] = values_to_save[best_index], values_to_save[0]
+            return(VPTreeNode(values_to_save[0],threshold,None,None, values_to_save))
+
         # TODO there might be a smarter way to select this element
         # Selects a random element and moves it to the front
         # That way it can be used as a pivot
@@ -56,8 +80,8 @@ class VPTree:
         threshold = currentNodeValue.distance(distances[median][1])
         leftValues = [x[1] for x in distances[:median]]
         rightValues = [x[1] for x in distances[median:]]
-        left = VPTree.createVPTree(leftValues,random)
-        right = VPTree.createVPTree(rightValues,random)
+        left = VPTree.createVPTree(leftValues,random,max_leaf_size)
+        right = VPTree.createVPTree(rightValues,random,max_leaf_size)
         # swap back to not change the original data
         if random:
             values[0], values[index] =  values[index], values[0]
@@ -80,7 +104,7 @@ class VPTree:
             print(indent,"}", end='',sep='')
 
     def nearestNeighbour(tree, point, k = 1):
-        dist = tree.value.distance(point)
+        dist = tree.distance(point)
         if(k==1):
             cutOffDist = dist
             bestNodes = [(dist,tree)]
@@ -94,16 +118,16 @@ class VPTree:
         if(currentNode is None):
             return(bestNodes, cutOffDist, ops)
         ops = ops + 1
-        distance = currentNode.value.distance(point)
+        distance = currentNode.distance(point)
         if(distance < cutOffDist):
-            (maxDist,currentIndex) = VPTree.knnMax(bestNodes)
-            bestNodes[currentIndex] = (distance, currentNode)
-            (cutOffDist, currentIndex) = VPTree.knnMax(bestNodes)
+            VPTree.insertSorted(bestNodes,(distance,currentNode.vp))
+            cutOffDist = bestNodes[0][0]
 
-        # Might be faster without this
-        if(currentNode.left is None and currentNode.right is None):
-            return(bestNodes, cutOffDist, ops)
-       
+        if(currentNode.is_leaf):
+            if(len(currentNode.data) == 1):
+                return(bestNodes, cutOffDist, ops)
+            return VPTree.closestLinearSearch(currentNode, point, distance, bestNodes, cutOffDist, ops)
+
         if(distance < currentNode.threshold):
             (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
             if(distance + cutOffDist > currentNode.threshold):
@@ -114,20 +138,28 @@ class VPTree:
                (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
 
         return(bestNodes, cutOffDist, ops)
+    
+    def closestLinearSearch(currentNode, point, distance, bestNodes, cutOffDist, ops):
 
+        if(distance - currentNode.threshold < cutOffDist):
+            distances = [(vlmc.distance(point),vlmc) for vlmc in currentNode.data]
+            ops+=len(currentNode.data)
+            distances.sort(key=itemgetter(0))
+            for distance in distances:
+                if(distance[0] < cutOffDist):
+                    VPTree.insertSorted(bestNodes, distance)
+                    cutOffDist = bestNodes[0][0]
 
-    def knnMax(nodeList):
-        length = len(nodeList)
-        if(len==1):
-            return(nodeList[0][0],0)
-        maxDist = 0
-        currentIndex = 0
-        for i in range(length):
-            if(maxDist < nodeList[i][0]):
-                maxDist = nodeList[i][0]
-                currentIndex = i
-        return(maxDist, currentIndex)
-
+        return(bestNodes, cutOffDist, ops)
+    
+    def insertSorted(nodeList, item):
+        for i, val in enumerate (nodeList[:-1]):
+            if(val[1]>item[1]):
+                nodeList[i]=nodeList[i+1]
+            else:
+                nodeList[i]=item
+        nodeList[-1]=item
+    
     def overlap(tree):
         node_list=[]
         VPTree.create_list(tree, node_list)
@@ -138,7 +170,7 @@ class VPTree:
         return(overlap)
 
     def _overlap(current, other):
-        return(int(current.value.distance(other.value) > (current.threshold + other.threshold)))
+        return(int(current.distance(other.vp) > (current.threshold + other.threshold)))
 
     def create_list(tree, node_list):
         if tree is not None:
