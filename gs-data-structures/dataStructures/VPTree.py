@@ -6,6 +6,8 @@ import numpy as np
 import heapq
 import pickle
 
+
+
 class VPTreeNode:
     
     def __init__(self, vp, threshold, left, right, data=None):
@@ -103,8 +105,9 @@ class VPTree:
             print()
             print(indent,"}", end='',sep='')
 
-    def nearestNeighbour(tree, point, k = 1):
+    def nearestNeighbour(tree, point, k = 1, greedy_factor=0):
         dist = tree.distance(point)
+        greedy_multiplier = 1/(1+greedy_factor)
         if(k==1):
             cutOffDist = dist
             bestNodes = [(dist,tree)]
@@ -112,9 +115,9 @@ class VPTree:
             bestNodes = [(float_info.max, None) for i in range(k-1)]
             bestNodes.append((dist, tree))
             cutOffDist = float_info.max
-        return(VPTree.NNS(tree, point, bestNodes, cutOffDist, 0))
+        return(VPTree.NNS(tree, point, bestNodes, cutOffDist, 0, greedy_multiplier))
 
-    def NNS(currentNode, point, bestNodes, cutOffDist, ops):
+    def NNS(currentNode, point, bestNodes, cutOffDist, ops, greedy_multiplier):
         if(currentNode is None):
             return(bestNodes, cutOffDist, ops)
         ops = ops + 1
@@ -129,13 +132,13 @@ class VPTree:
             return VPTree.closestLinearSearch(currentNode, point, distance, bestNodes, cutOffDist, ops)
 
         if(distance < currentNode.threshold):
-            (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
-            if(distance + cutOffDist > currentNode.threshold):
-                (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
+            (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops, greedy_multiplier)
+            if(distance + greedy_multiplier*cutOffDist > currentNode.threshold):
+                (bestNodess, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops, greedy_multiplier)
         else:
-            (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops)
-            if(distance - cutOffDist < currentNode.threshold):
-               (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops)
+            (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.right, point, bestNodes, cutOffDist, ops, greedy_multiplier)
+            if(distance - greedy_multiplier*cutOffDist < currentNode.threshold):
+               (bestNodes, cutOffDist, ops) = VPTree.NNS(currentNode.left, point, bestNodes, cutOffDist, ops, greedy_multiplier)
 
         return(bestNodes, cutOffDist, ops)
     

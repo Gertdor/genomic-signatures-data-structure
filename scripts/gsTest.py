@@ -20,33 +20,38 @@ def fullTree(elements, random_element, leaf_size):
     tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
     return(tree)
 
-def partOfTree(cutoff, elements, random, leaf_size):
-    numElemInTree = round(len(elements)*cutoff)
+def partOfTree(elems, args):
+    if(args.randomize_elements):
+        elements = elems.copy()
+        np.random.shuffle(elements)
+    else:
+        elements = elems
+    numElemInTree = round(len(elements)*args.cutoff)
     elementsChecked = len(elements) - numElemInTree
-    tree = VPTree.createVPTree(elements[0:numElemInTree],random=random, max_leaf_size = leaf_size)
+    tree = VPTree.createVPTree(elements[0:numElemInTree],random=args.random_vp, max_leaf_size = args.leaf_size)
     
     start_time = time.time()
-    NNS = [VPTree.nearestNeighbour(tree, elem) for elem in elements[numElemInTree:]]
+    NNS = [VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor) for elem in elements[numElemInTree:]]
     total_time = time.time()-start_time
     print("total time:", total_time)
     print("time per element", total_time/elementsChecked)
 
     printNNS(NNS)
-
+    resultQuality(elements[0:numElemInTree],NNS)
 
 # Does not really work. In top ~20%
-def lowDimTree(vlmcs, vlmcElements, cutoff):
+def lowDimTree(vlmcs, vlmcElements, args):
     elements = []
     elementsToCheck = 6
     for vlmc in vlmcs:
         tree = vlmc.tree['']
         elements.append(VPTreeElement(np.array([tree['A'],tree['C'],tree['G']]), vlmc.name))
     
-    numElemInTree = 100 # round(len(elements)*cutoff)
+    numElemInTree = 100 # round(len(elements)*args.cutoff)
     print(len(elements))
 
     tree = VPTree.createVPTree(elements[0:numElemInTree])
-    NNS = [VPTree.nearestNeighbour(tree, elem) for elem in elements[numElemInTree:numElemInTree+elementsToCheck]]
+    NNS = [VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor) for elem in elements[numElemInTree:numElemInTree+elementsToCheck]]
     printNNS(NNS)
 
     for i in range(elementsToCheck):
@@ -76,13 +81,17 @@ def generatePointTree(args):
 
 def number_NN(tree, args):
     elements = [VPTreeElement(np.random.uniform(args.min_value,args.max_value, args.dim)) for x in range(args.number_of_searches)]
-    NNS = [VPTree.nearestNeighbour(tree,elem,1) for elem in elements]
+    NNS = [VPTree.nearestNeighbour(tree,elem,args.k,args.greedy_factor) for elem in elements]
     printNNS(NNS)
 
 def saveDistances(vlmcs, name):
     distances = calc_pariwise_fast(vlmcs)
     save_distances(distances, name)
 
+def resultQuality(points_in_tree, NNS):
+    #distances = [[tree_node.distance(NN[0][0][1]) for tree_node in points_in_tree] for NN in NNS]
+    #print(min(distances))
+    return 0
 
 def calcOverlap(tree):
     overlap = VPTree.overlap(tree)
@@ -90,21 +99,23 @@ def calcOverlap(tree):
 
 
 parser = argparse.ArgumentParser(description="test args")
-parser.add_argument("--cutoff", type=float, default=0.5)
-parser.add_argument("--nn_test", action='store_true')
-parser.add_argument("--overlap", action='store_true')
-parser.add_argument("--low_dim_tree", action='store_true')
-parser.add_argument("--num",action='store_true')
-
-parser.add_argument("--dist_stats", action='store_true')
-parser.add_argument("--leaf_size", type=int, default=1)
-parser.add_argument("--random_vp",action='store_true')
-parser.add_argument("--print",action='store_true')
-parser.add_argument("--dim", type=int, default=5)
-parser.add_argument("--max_value", type=int, default=5)
-parser.add_argument("--min_value", type=int, default=0)
-parser.add_argument("--number_of_points", type=int, default=1000)
-parser.add_argument("--number_of_searches", type=int, default=100)
+parser.add_argument("--cutoff", type=float, default=0.8, help="How large portion of the data should be stored in the tree. The rest is searched for the nearest neighbour")
+parser.add_argument("--nn_test", action='store_false',help= "Should a nearest neighbour test be performed")
+parser.add_argument("--overlap", action='store_true',help= "should the overlap in the tree be calculated")
+parser.add_argument("--low_dim_tree", action='store_true', help="Should only the ATGC distance be used as distance metric")
+parser.add_argument("--num",action='store_true',help="Should whatever tests being run also be run with a tree based on random DIM dimensional points?")
+parser.add_argument("--no_gs",action='store_true',help="should genomic signatures not be used?")
+parser.add_argument("--dist_stats", action='store_true', help="Should basic statistics be printed on how the distance function performs for the currently used data set")
+parser.add_argument("--leaf_size", type=int, default=1, help="The largest size a leaf may take in the tree")
+parser.add_argument("--random_vp",action='store_true', help="Should the vantage point be choosen at random?")
+parser.add_argument("--dim", type=int, default=5, help="The dimension of the randomly generated numbers")
+parser.add_argument("--max_value", type=int, default=5, help="max value of the randomly generated numbers")
+parser.add_argument("--min_value", type=int, default=0, help="min value of the randomly generated numbers")
+parser.add_argument("--number_of_points", type=int, default=1000, help="Number of DIM dimensional points to generate")
+parser.add_argument("--number_of_searches", type=int, default=100, help="Number of DIM dimensional points to search for nearest neighbours with")
+parser.add_argument("--greedy_factor",type=float, default=0, help="Determines how greedy the pruning is. A solution must be atleast this much better to be considered. Default is 0, that is, anything which has the ability to be better is considered.")
+parser.add_argument("--k",type=int,default=1, help="how many neighbours should be found? default=1")
+parser.add_argument("--randomize_elements",action='store_true',help="should the elements to be stored/quiered be randomized")
 
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
@@ -119,7 +130,7 @@ if(args.overlap):
         point_tree = generatePointTree(args)
         print("point tree overlap")
         calcOverlap(point_tree)
-    else:
+    if(not args.no_gs):
         vlmc_tree = fullTree(elements,args.random_vp,args.leaf_size)
         print("vlmc tree overlap")
         calcOverlap(vlmc_tree)
@@ -128,13 +139,11 @@ if(args.nn_test):
     if(args.num):
         point_tree = generatePointTree(args)
         number_NN(point_tree,args)
-    else:
-        cutoff = args.cutoff
-        partOfTree(cutoff, elements, args.random_vp, args.leaf_size)
+    if(not args.no_gs):
+        partOfTree(elements, args)
 
 if(args.low_dim_tree):
-    cutoff = args.cutoff
-    lowDimTree(vlmcs, elements, cutoff)
+    lowDimTree(vlmcs, elements)
 
 if(args.dist_stats):
     distance_function_stats(elements)
