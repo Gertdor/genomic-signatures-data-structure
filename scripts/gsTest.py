@@ -20,7 +20,14 @@ def fullTree(elements, random_element, leaf_size):
     tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
     return(tree)
 
-def partOfTree(elems, args):
+def multipleNNSearches(elements, args):
+
+    all_NNS = [partOfTree(elements,args,print_results=False) for i in range(args.number_of_runs)]
+    complete_stats = [(NN[1],NN[2]) for NNS in all_NNS for NN in NNS]
+    print(stats.describe(complete_stats))
+
+def partOfTree(elems, args, print_results = True):
+    
     if(args.randomize_elements):
         elements = elems.copy()
         np.random.shuffle(elements)
@@ -33,11 +40,13 @@ def partOfTree(elems, args):
     start_time = time.time()
     NNS = [VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor) for elem in elements[numElemInTree:]]
     total_time = time.time()-start_time
-    print("total time:", total_time)
-    print("time per element", total_time/elementsChecked)
 
-    printNNS(NNS)
-    resultQuality(elements[0:numElemInTree],NNS)
+
+    if(print_results):
+        print("total time:", total_time)
+        print("time per element", total_time/elementsChecked)
+        printNNS(NNS)
+    return(NNS)
 
 # Does not really work. In top ~20%
 def lowDimTree(vlmcs, vlmcElements, args):
@@ -61,6 +70,11 @@ def lowDimTree(vlmcs, vlmcElements, args):
         
 
 def printNNS(NNS):
+    (avg_dist_calcs, avg_dist) = get_NNS_stats(NNS)
+    print("avg number of dist calcs",avg_dist_calcs)
+    print("average dist: ",avg_dist)
+
+def get_NNS_stats(NNS):
     i=0
     totalNumberOfActions = 0
     totalDist = 0
@@ -69,10 +83,7 @@ def printNNS(NNS):
         totalNumberOfActions+=elem[2]
         totalDist+=elem[1]
         i=i+1
-
-    print("avg number of dist calcs", totalNumberOfActions/elementsChecked)
-    print("average dist: ", totalDist/elementsChecked)
-
+    return(totalNumberOfActions/elementsChecked, totalDist/elementsChecked)
 
 def generatePointTree(args):
     numberList = [VPTreeElement(np.random.uniform(args.min_value, args.max_value, args.dim )) for x in range(args.number_of_searches)]
@@ -116,6 +127,7 @@ parser.add_argument("--number_of_searches", type=int, default=100, help="Number 
 parser.add_argument("--greedy_factor",type=float, default=0, help="Determines how greedy the pruning is. A solution must be atleast this much better to be considered. Default is 0, that is, anything which has the ability to be better is considered.")
 parser.add_argument("--k",type=int,default=1, help="how many neighbours should be found? default=1")
 parser.add_argument("--randomize_elements",action='store_true',help="should the elements to be stored/quiered be randomized")
+parser.add_argument("--number_of_runs", type=int, default=1,help="How many times should an NN search be repeated for a specific setting.")
 
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
@@ -140,7 +152,10 @@ if(args.nn_test):
         point_tree = generatePointTree(args)
         number_NN(point_tree,args)
     if(not args.no_gs):
-        partOfTree(elements, args)
+        if(args.number_of_runs==1):
+            partOfTree(elements, args)
+        else:
+            multipleNNSearches(elements,args)
 
 if(args.low_dim_tree):
     lowDimTree(vlmcs, elements)
