@@ -22,9 +22,9 @@ def get_distance_accuracy(distances, found_pair):
     i = 0
     misses = []
     closer_dists = []
-    while(vlmc.identifier != current_distances[i]):
+    while vlmc.identifier != current_distances[i]:
         closer_dists.append(current_distances[i][0])
         misses.append(current_distances[i])
-    
+
     print(stats.summary(closer_dists))
-    return(misses)
+    return misses

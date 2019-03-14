@@ -6,6 +6,5 @@ setuptools.setup(
     author="Sebastian Norlin",
     author_email="norlins@student.chalmers.se",
     description="data structures for working with genomic signatures",
-    packages=setuptools.find_packages()
+    packages=setuptools.find_packages(),
 )
-
