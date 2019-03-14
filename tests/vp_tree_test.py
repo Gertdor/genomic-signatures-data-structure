@@ -29,6 +29,11 @@ def test_overlap(vlmcs):
     overlap = VPTree.overlap(tree)
     assert overlap == 3738
 
+def test_return_type(vlmcs):
+    tree = VPTree.createVpTree(elements)
+    NNS = [VPTree.nearestNeighbour(tree, elem) for elem in vlmcs]
+    for nn in NNS:
+       assert type(nn[0][0][1]) is VPTreeVLMC
 
 def test_random(vlmcs):
     tree1 = VPTree.createVPTree(vlmcs, random=False)
@@ -66,3 +71,4 @@ test_pickle(elements)
 test_overlap(elements)
 test_random(elements)
 test_leaf_size()
+test_return_type(elements)
