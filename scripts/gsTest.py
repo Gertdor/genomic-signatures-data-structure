@@ -13,37 +13,51 @@ from clustering_genomic_signatures.util.parse_distance import add_distance_argum
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VLMCElement import VPTreeVLMC
-from data_analysis.distance_analysis import distance_function_stats
-from data_analysis.distance_function_accuracy import save_distances, load_distances, calculate_pairwise_distance, get_distance_accuracy, calc_pariwise_fast
+from util.distance_analysis import distance_function_stats
+#from data_analysis.distance_function_accuracy import save_distances, load_distances, calculate_pairwise_distance, get_distance_accuracy, calc_pariwise_fast
 
 def fullTree(elements, random_element, leaf_size):
     tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
     return(tree)
 
-def greedy_factor_test(elements, args):
+def greedy_factor_test(elements, output_file, args):
+    """ Perform a test on how the greedy factor effects different metrics
+
+        Input
+        -----
+        elements - VPTreeVLMC objects that are to be used in the tree, or to be searched for.
+        
+        output
+        ------
+        writes the following tuple to the file output_file
+        (all_runs, greedy_factors, all_signatures_used)
+        they have the following properties
+        all_runs -- a list for each greedy factor. That list contains a list of all runs,
+                    each run is a list oftuples of length args.num_elem_in_tree or (1-cutoff)*len(elements)
+                    whichever is smaller.
+                    The tuple has the form: (neighbour ID, distance to neighbor, nbr distance calculations)
+        greedy_factors -- a list of all greedy factors used
+        all_signatures_used -- a list containing a tuple of form ([elements in tree],[searched points])
+    """
     greedy_factors = np.linspace(args.greedy_start, args.greedy_end, args.greedy_num_samples)
     all_runs=[[] for i in range(args.greedy_num_samples)]
-
+    all_signatures_used = []
     for run_nbr in range(args.number_of_runs):
         
         print("current run number:",run_nbr)
         (tree_elems, search_elems) = _split_elements(elements,args)
         tree = VPTree.createVPTree(tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size)
+        tree_elem_names = [elem.identifier for elem in tree_elems]
+        search_elem_names = [elem.identifier for elem in search_elems]
+        all_signatures_used.append((tree_elem_names, search_elem_names))
         for (i,greedy_factor) in enumerate(greedy_factors):
             
             run_NNS = [VPTree.nearestNeighbour(tree,elem, args.k, greedy_factor) for elem in search_elems]
-            run_stats = [(NN[1],NN[2]) for NN in run_NNS]
-            all_runs[i].extend(run_stats)
+            run_stats = [(NN[0][0][1].identifier,NN[1],NN[2]) for NN in run_NNS]
+            all_runs[i].append(run_stats)
         
-    for run in all_runs:
-        run_stats = stats.describe(run)
-        #print("minmax", run_stats.minmax)
-        
-        print("mean", run_stats.mean)
-        #print("variance", run_stats.variance)
-
     with open("greedy_test.pickle","wb") as f:
-        pickle.dump((all_runs,greedy_factors),f)
+        pickle.dump((all_runs,greedy_factors, all_signatures_used),f)
 
 
 def multipleNNSearches(elements, args, print_results = True):
@@ -137,14 +151,6 @@ def number_NN(tree, args):
     NNS = [VPTree.nearestNeighbour(tree,elem,args.k,args.greedy_factor) for elem in elements]
     printNNS(NNS)
 
-def saveDistances(vlmcs, name):
-    distances = calc_pariwise_fast(vlmcs)
-    save_distances(distances, name)
-
-def resultQuality(points_in_tree, NNS):
-    #distances = [[tree_node.distance(NN[0][0][1]) for tree_node in points_in_tree] for NN in NNS]
-    #print(min(distances))
-    return 0
 
 def calcOverlap(tree):
     overlap = VPTree.overlap(tree)
@@ -184,7 +190,7 @@ args = parser.parse_args()
 
 vlmcs = parse_vlmcs(args, "db_config.json")
 distance_function = parse_distance_method(args)
-elements = [VPTreeVLMC(vlmc, distance_function, vlmc.name) for vlmc in vlmcs]
+elements = [VPTreeVLMC(vlmc, distance_function, i) for i,vlmc in enumerate(vlmcs)]
 
 if(args.overlap):
     if(args.num):
