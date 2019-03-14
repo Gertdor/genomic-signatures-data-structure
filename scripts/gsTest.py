@@ -56,7 +56,7 @@ def greedy_factor_test(elements, output_file, args):
             run_stats = [(NN[0][0][1].identifier,NN[1],NN[2]) for NN in run_NNS]
             all_runs[i].append(run_stats)
         
-    with open("greedy_test.pickle","wb") as f:
+    with open(output_file,"wb") as f:
         pickle.dump((all_runs,greedy_factors, all_signatures_used),f)
 
 
@@ -183,6 +183,7 @@ parser.add_argument("--greedy_start",type=float,default=1,help="start value of g
 parser.add_argument("--greedy_end",type=float,default=5,help="end value of greedy_factor when running greedy_test")
 parser.add_argument("--greedy_num_samples",type=int,default=21,help="number of samples to take between greedy_start and greedy_end when running greedy_test")
 parser.add_argument("--greedy_test_file_name",default="greedy_test_data.pickle",help="where should the data be saved after the greedy_factor_test has been run")
+parser.add_argument("-o",default="greedy_test.pickle",help="output file name of greedy test results")
 
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
@@ -214,7 +215,7 @@ if(not args.no_nn_test):
             multipleNNSearches(elements,args)
 
 if(args.greedy_test):
-    greedy_factor_test(elements,args)    
+    greedy_factor_test(elements,"greedy_factor_test.pickle",args)    
 
 if(args.low_dim_tree):
     lowDimTree(vlmcs, elements)
