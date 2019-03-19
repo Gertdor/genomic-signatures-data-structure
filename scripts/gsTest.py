@@ -24,9 +24,6 @@ from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VLMCElement import VPTreeVLMC
 from util.distance_analysis import distance_function_stats
 
-# from data_analysis.distance_function_accuracy import save_distances, load_distances, calculate_pairwise_distance, get_distance_accuracy, calc_pariwise_fast
-
-
 def fullTree(elements, random_element, leaf_size):
     tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
     return tree

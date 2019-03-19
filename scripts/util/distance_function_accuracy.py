@@ -1,3 +1,22 @@
+from clustering_genomic_signatures.util.parse_vlmcs import (
+    parse_vlmcs,
+    add_parse_vlmc_args,
+)
+from clustering_genomic_signatures.util.parse_distance import (
+    add_distance_arguments,
+    parse_distance_method,
+)
+
+def distance_between_ids(args, pairs, names):
+    args.condition='true'
+    args.distance_function = 'frobenius-norm'
+    frobenius_norm = parse_distance_method(args)
+    vlmcs = parse_vlmcs(args, "db_config.json")
+    vlmc_dict = dict([(vlmc.name,vlmc) for vlmc in vlmcs])
+    distances = [frobenius_norm.distance(vlmc_dict[names[i]],vlmc_dict[names[j]]) for i,j in pairs]
+    return distances
+
+
 def get_distance_accuracy(distances, found_pair):
     """
     parameters

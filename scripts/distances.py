@@ -67,6 +67,7 @@ def norm_to_gc_dist(vlmcs, neighbor_order, number_of_neighbors, filename=None):
             pickle.dump(all_distances,f)
 
 
+
 parser = argparse.ArgumentParser(description="distance parser")
 
 add_parse_vlmc_args(parser)
