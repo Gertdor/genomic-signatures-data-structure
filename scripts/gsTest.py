@@ -224,7 +224,8 @@ parser.add_argument(
     "--cutoff",
     type=float,
     default=0.8,
-    help="How large portion of the data should be stored in the tree. The rest is searched for the nearest neighbour",
+    help=("How large portion of the data should be stored in the tree."
+          "The rest is searched for the nearest neighbour")
 )
 parser.add_argument(
     "--no_nn_test",
@@ -252,7 +253,8 @@ parser.add_argument(
 parser.add_argument(
     "--dist_stats",
     action="store_true",
-    help="Should basic statistics be printed on how the distance function performs for the currently used data set",
+    help=("Should basic statistics be printed on how the distance function"
+          "performs for the currently used data set"),
 )
 parser.add_argument(
     "--leaf_size",
@@ -266,7 +268,10 @@ parser.add_argument(
     help="Should the vantage point be choosen at random?",
 )
 parser.add_argument(
-    "--dim", type=int, default=5, help="The dimension of the randomly generated numbers"
+    "--dim",
+    type=int,
+    default=5,
+    help="The dimension of the randomly generated numbers"
 )
 parser.add_argument(
     "--max_value",
@@ -296,10 +301,15 @@ parser.add_argument(
     "--greedy_factor",
     type=float,
     default=1,
-    help="Determines how greedy the pruning is. A solution must be atleast this much better to be considered. Default is 1, that is, anything which has the ability to be better is considered. 2 means the solution has to be atleast twice as good to be considered",
+    help=("Determines how greedy the pruning should be. A solution must be atleast this much"
+          "better to be considered. Default is 1, that is, anything which has the ability to be better"
+          "is considered. 2 means the solution has to be atleast twice as good to be considered"),
 )
 parser.add_argument(
-    "--k", type=int, default=1, help="how many neighbours should be found? default=1"
+    "--k",
+    type=int,
+    default=1,
+    help="how many neighbours should be found? default=1"
 )
 parser.add_argument(
     "--randomize_elements",
@@ -322,7 +332,8 @@ parser.add_argument(
 parser.add_argument(
     "--greedy_test",
     action="store_true",
-    help="This will run multiple runs with different greedy factors determined by --greedy_start, --greedy_end, --greedy_step",
+    help=("This will run multiple runs with different greedy factors"
+          "determined by --greedy_start, --greedy_end, --greedy_step"),
 )
 parser.add_argument(
     "--greedy_start",
@@ -356,6 +367,7 @@ add_distance_arguments(parser)
 args = parser.parse_args()
 
 vlmcs = parse_vlmcs(args, "db_config.json")
+print("number of vlmcs:",len(vlmcs))
 distance_function = parse_distance_method(args)
 elements = [VPTreeVLMC(vlmc, distance_function, i) for i, vlmc in enumerate(vlmcs)]
 

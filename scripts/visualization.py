@@ -9,9 +9,8 @@ from clustering_genomic_signatures.dbtools.get_signature_metadata import (
 )
 
 
-def plot_dist_calc_to_distance(filename, variance=False):
-    with open(filename, "rb") as f:
-        (all_runs, greedy_factors, signatures_used) = pickle.load(f)
+def plot_dist_calc_to_distance(run_data, variance=False):
+    (all_runs, greedy_factors, signatures_used) = run_data
 
     all_stats = []
     for factor in all_runs:
@@ -32,9 +31,18 @@ def plot_dist_calc_to_distance(filename, variance=False):
     plt.title("Pruning effect on number of distance calculations made")
 
 
-def box_plot_dist(filename):
-    with open(filename, "rb") as f:
-        (all_runs, greedy_factors, signatures_used) = pickle.load(f)
+def plot_norm_to_gc(run_data):
+    fig = plt.figure()
+    plt.scatter(*zip(*run_data))
+    plt.xlabel("Frobenius norm distance to neighbor")
+    plt.ylabel("Delta GC-content")
+    plt.title(
+        "Frobenius distance to delta GC-content for viruses for 5 nearest neighbors"
+    )
+
+
+def box_plot_dist(run_data):
+    (all_runs, greedy_factors, signatures_used) = run_data
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -48,9 +56,8 @@ def box_plot_dist(filename):
     plt.title("Pruning effect on distance to nearest neighbour")
 
 
-def box_plot_dist_calcs(filename):
-    with open(filename, "rb") as f:
-        (all_runs, greedy_factors, signatures_used) = pickle.load(f)
+def box_plot_dist_calcs(run_data):
+    (all_runs, greedy_factors, signatures_used) = run_data
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -65,30 +72,80 @@ def box_plot_dist_calcs(filename):
     plt.title("Pruning effect on the number of distance calculations made")
 
 
-def get_found_points(run_filename, neighbors_filename, include_ground_truth=True):
+def _get_found_points(neighbors,names, run_data, include_ground_truth=True):
 
-    with open(run_filename, "rb") as f:
-        (all_runs, greedy_factors, signatures_used) = pickle.load(f)
+    (all_runs, greedy_factors, signatures_used) = run_data
 
     found_neighbors = [[nn[0] for tree in factor for nn in tree] for factor in all_runs]
 
     if include_ground_truth:
-        with open(neighbors_filename, "rb") as f:
-            (neighbors, names) = pickle.load(f)
-
-        true_nns = nearest_neighbor_in_all_trees(neighbors, signatures_used)
+        true_nns = _nearest_neighbor_in_all_trees(neighbors, signatures_used)
         found_neighbors.insert(0, true_nns)
 
     return found_neighbors
 
 
-def exact_matches(run_filename, neighbors_filename):
-    all_points = get_found_points(run_filename, neighbors_filename, True)
+def true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
+
+    (all_runs, greedy_factors, signatures_used) = run_data
+
+    meta_data = get_metadata_for(names.tolist(), db_config_path)
+
+    genus_distances = []
+    family_distances = []
+    for tree, point_set in signatures_used:
+        for point in point_set:
+            i = 0
+            current_genus = meta_data[names[point]]["genus"]
+            current_family = meta_data[names[point]]["family"]
+            current_neighbor = neighbors[point][i]
+            while (
+                current_genus != meta_data[names[current_neighbor]]["genus"]
+                or current_neighbor not in tree
+                or current_neighbor == point
+            ) and i < max_distance:
+                i += 1
+                current_neighbor = neighbors[point][i]
+            genus_distances.append(i)
+            i = 0
+            current_neighbor = neighbors[point][i]
+            while (
+                current_family != meta_data[names[current_neighbor]]["family"]
+                or current_neighbor not in tree
+                or current_neighbor == point
+            ) and i < max_distance:
+                i += 1
+                current_neighbor = neighbors[point][i]
+            family_distances.append(i)
+
+    return (genus_distances, family_distances)
+
+
+def plot_dist_to_bio_match(neighbors, names, run_data, max_distance=50):
+
+    genus_distances, family_distances = true_distance_to_bio_match(
+        neighbors, names, run_data, max_distance
+    )
+
+    plt.figure()
+    plt.hist(genus_distances, 50, facecolor="blue")
+    plt.xlabel('number of non matching closer neighbors')
+    plt.ylabel('number of occurances')
+    plt.title('distance in signatures to closest signature of the same genus')
+    plt.figure()
+    plt.xlabel('number of non matching closer neighbors')
+    plt.ylabel('number of occurances')
+    plt.title('distance in signatures to closest signature of the same family')
+    plt.hist(family_distances, 50, facecolor="green")
+
+
+def exact_matches(neighbors, names, run_data):
+    all_points = _get_found_points(neighbors,names, run_data, True)
     ground_truth = all_points[0]
     rest = all_points[1:]
     print(len(rest))
     number_of_matches = [
-        number_of_equal_elements(ground_truth, current) for current in rest
+        _number_of_equal_elements(ground_truth, current) for current in rest
     ]
 
     print(number_of_matches)
@@ -98,10 +155,11 @@ def exact_matches(run_filename, neighbors_filename):
     plt.ylim(0, max(number_of_matches))
 
 
-def biological_accuracy(run_filename, neighbors_filename, db_config_path):
+def biological_accuracy(neighbors, names, run_data, db_config_path):
+    (all_runs, greedy_factors, signatures_used) = run_data
 
     meta_data = get_metadata_for(names.tolist(), db_config_path)
-    found_neighbors = get_found_points(run_filename, neighbors_filename)
+    found_neighbors = _get_found_points(neighbors,names, run_data)
 
     searched_points = [i for batch in signatures_used for i in batch[1]]
     genuses = [meta_data[names[point]]["genus"] for point in searched_points]
@@ -117,29 +175,50 @@ def biological_accuracy(run_filename, neighbors_filename, db_config_path):
     ]
 
     genus_matches = [
-        number_of_equal_elements(genuses, genuses_current_try)
+        _number_of_equal_elements(genuses, genuses_current_try)
         for genuses_current_try in found_genuses
     ]
     family_matches = [
-        number_of_equal_elements(families, families_current_try)
+        _number_of_equal_elements(families, families_current_try)
         for families_current_try in found_families
     ]
+    print(genus_matches)
+    print(family_matches)
+    genus_matches = np.array(genus_matches) / len(searched_points)
+    family_matches = np.array(family_matches) / len(searched_points)
+
+    # TODO seaborn nicer bars
+
+    fig, ax = plt.subplots()
+    xlabels = ["brute force"] + [str(round(f, 1)) for f in greedy_factors]
+    bar_width = 0.6
+    bar_loc = np.arange(len(xlabels)) * 1.5
+    bars1 = ax.bar(bar_loc, genus_matches, width=bar_width, color="r")
+    bars2 = ax.bar(bar_loc + bar_width, family_matches, width=bar_width, color="b")
+
+    ax.set_title("The effect of pruning factor on classification accuracy")
+    ax.set_xlabel("pruning factor")
+    ax.set_ylabel("prediction accuracy")
+    ax.set_xticks(bar_loc + bar_width / 2)
+    ax.set_xticklabels(xlabels)
+    ax.legend((bars1[0], bars2[0]), ("genus", "family"))
+
     print("genus matches", genus_matches)
     print("family_matches", family_matches)
 
 
-def number_of_equal_elements(list1, list2):
+def _number_of_equal_elements(list1, list2):
     return sum([x == y for x, y in zip(list1, list2)])
 
 
-def nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
+def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
     NNS = []
     for (tree, points) in signatures_used:
-        NNS.extend(nearest_neighbor_in_tree(neighbor_list, tree, points))
+        NNS.extend(_nearest_neighbor_in_tree(neighbor_list, tree, points))
     return NNS
 
 
-def nearest_neighbor_in_tree(neighbor_array, tree, points):
+def _nearest_neighbor_in_tree(neighbor_array, tree, points):
     number_of_elements = len(neighbor_array[0])
     elements_in_tree = np.zeros(number_of_elements)
     neighbors = []
@@ -154,26 +233,70 @@ def nearest_neighbor_in_tree(neighbor_array, tree, points):
     return neighbors
 
 
-def get_prediction_accuracy(run_filename, neighbors_filename, dbconfig_path):
-    with open(run_filename, "rb") as f:
-        (all_runs, greedy_factors, signatures_used) = pickle.load(f)
-    with open(neighbors_filename, "rb") as f:
-        (neighbors, names) = pickle.load(f)
-    meta_data = get_metadata_for(names, dbconfig_path)
-
-
 parser = argparse.ArgumentParser(description="visualization script args")
 
+parser.add_argument(
+    "--boxplots", action="store_true", help="should boxplots be generated"
+)
+parser.add_argument(
+    "--bio_accuracy",
+    action="store_true",
+    help="should the biological accuracy be calculated?",
+)
+parser.add_argument(
+    "--exact_matches",
+    action="store_true",
+    help="should the number of exact matches be plotted",
+)
+parser.add_argument(
+    "--acc_to_dist",
+    action="store_true",
+    help="should the accuracy to number of distance calculations be plotted?",
+)
+parser.add_argument(
+    "--dist_to_match",
+    action="store_true",
+    help="calculate the distance to the first genus/family match",
+)
+parser.add_argument(
+    "--norm_to_gc", action="store_true", help="plot NN distance to gc distance"
+)
+
+parser.add_argument("--input_file", help="file name of greedy run data")
+parser.add_argument(
+    "--distance_file", help="file for pairwise distance and names for current dataset"
+)
+
+args = parser.parse_args()
+
 db_config_path = "db_config.json"
-fileName = "10run400searchFullWithNNInfo.pickle"
-# fileName = "greedy_factor_test.pickle"
-neighbors_filename = "all_neighbors.pickle"
-exact_matches(fileName, neighbors_filename)
 
-# plt.style.use('seaborn-whitegrid')
-# plot_dist_calc_to_distance(fileName, False)
-# biological_accuracy(fileName, neighbors_filename, db_config_path)
-# box_plot_dist(fileName)
-# box_plot_dist_calcs(fileName)
+with open(args.input_file, "rb") as f:
+    run_data = pickle.load(f)
 
+if args.norm_to_gc:
+    plot_norm_to_gc(run_data)
+
+if args.boxplots:
+    box_plot_dist(run_data)
+    box_plot_dist_calcs(run_data)
+
+if args.acc_to_dist:
+    plot_dist_calc_to_distance(run_data, False)
+
+if (args.bio_accuracy or args.dist_to_match or args.exact_matches):
+
+    with open(args.distance_file, "rb") as f:
+        (neighbors, names) = pickle.load(f)
+    
+    if args.exact_matches:
+        exact_matches(neighbors, names, run_data)
+
+    if args.bio_accuracy:
+        biological_accuracy(neighbors, names, run_data, db_config_path)
+    
+    if args.dist_to_match:
+        plot_dist_to_bio_match(neighbors,names,run_data)
+
+plt.style.use("seaborn-whitegrid")
 plt.show()
