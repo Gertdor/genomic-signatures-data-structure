@@ -1,3 +1,6 @@
+import numpy as np
+from scipy import stats
+
 from clustering_genomic_signatures.util.parse_vlmcs import (
     parse_vlmcs,
     add_parse_vlmc_args,
@@ -6,6 +9,12 @@ from clustering_genomic_signatures.util.parse_distance import (
     add_distance_arguments,
     parse_distance_method,
 )
+
+def distance_function_stats(elements):
+    distances = np.array(
+        [current.distance(other) for current in elements for other in elements]
+    )
+    print("Stat summary:", stats.describe(distances), "\n")
 
 def distance_between_ids(args, pairs, names):
     args.condition='true'

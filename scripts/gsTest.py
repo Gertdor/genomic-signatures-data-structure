@@ -22,7 +22,8 @@ from clustering_genomic_signatures.util.parse_distance import (
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VLMCElement import VPTreeVLMC
-from util.distance_analysis import distance_function_stats
+from util.distance_util import distance_function_stats
+from util.NN_data import NNData
 
 def fullTree(elements, random_element, leaf_size):
     tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
@@ -69,11 +70,13 @@ def greedy_factor_test(elements, output_file, args):
                 VPTree.nearestNeighbour(tree, elem, args.k, greedy_factor)
                 for elem in search_elems
             ]
-            run_stats = [(NN[0][0][1].identifier, NN[1], NN[2]) for NN in run_NNS]
-            all_runs[i].append(run_stats)
 
+            run_stats = [(NN.get_nodes(), NN.get_ops()) for NN in run_NNS]
+            all_runs[i].append(run_stats)
+    
+    data = NNData(all_runs, greedy_factors, all_signatures_used)
     with open(output_file, "wb") as f:
-        pickle.dump((all_runs, greedy_factors, all_signatures_used), f)
+        pickle.dump(data, f)
 
 
 def multipleNNSearches(elements, args, print_results=True):
@@ -127,7 +130,6 @@ def NNSearch(elements, args, print_results=True):
         for elem in search_elements
     ]
     total_time = time.time() - start_time
-
     if print_results:
         print("total time:", total_time)
         print("time per element", total_time / elementsChecked)
@@ -184,8 +186,8 @@ def get_NNS_stats(NNS):
     totalDist = 0
     elementsChecked = len(NNS)
     for elem in NNS:
-        totalNumberOfActions += elem[2]
-        totalDist += elem[1]
+        totalNumberOfActions += elem.get_ops()
+        totalDist += elem.get_cutoff_dist()
         i = i + 1
     return (totalNumberOfActions / elementsChecked, totalDist / elementsChecked)
 

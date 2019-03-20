@@ -37,6 +37,51 @@ class VPTreeNode:
     def __ne__(self, other):
         return not (self == other)
 
+class NearestNeighbors:
+
+    def __init__(self, size, initial_element):
+        self._size = size
+        self._ops = 0
+        self._node_list = [(float_info.max,None) for i in range(self._size)]
+        if initial_element is not None:
+            self.insert(initial_element)
+        self._update_cutoff_dist()
+
+    def _update_cutoff_dist(self):
+        self._cutoff_dist = self._node_list[0][0]
+
+    def incr_ops(self, number_of_ops = 1):
+        self._ops+=number_of_ops
+    
+    def get_ops(self):
+        return(self._ops)
+
+    def get_cutoff_dist(self):
+        return(self._cutoff_dist)
+    
+    def get_nodes(self):
+        return(self._node_list)
+    
+    def get_size(self):
+        return self._size
+
+    def insert(self, item):
+        if self._size == 1:
+            self._node_list = [item]
+            self._update_cutoff_dist()
+        else:
+            if item[0] > self._node_list[0][0]: # larger than the larget element, can discard
+                return
+            for i, val in enumerate(self._node_list[1:]):
+                if item[0] < val[0]:
+                    self._node_list[i-1] = self._node_list[i]
+                else:
+                    self._node_list[i] = item
+                    self._update_cutoff_dist()
+                    return
+            self._node_list[-1] = item
+            self._update_cutoff_dist()
+
 
 class VPTree:
     def save(tree, fileName):
@@ -142,87 +187,43 @@ class VPTree:
         """
         dist = tree.distance(point)
         greedy_multiplier = 1 / (greedy_factor)
-        if k == 1:
-            cutOffDist = dist
-            bestNodes = [(dist, tree.vp)]
-        else:
-            bestNodes = [(float_info.max, None) for i in range(k - 1)]
-            bestNodes.append((dist, tree.vp))
-            cutOffDist = float_info.max
-        return VPTree.NNS(tree, point, bestNodes, cutOffDist, 0, greedy_multiplier)
+        best_nodes = NearestNeighbors(k,(dist,tree.vp))
+        VPTree.NNS(tree, point, best_nodes, greedy_multiplier)
+        return best_nodes
 
-    def NNS(currentNode, point, bestNodes, cutOffDist, ops, greedy_multiplier):
+    def NNS(currentNode, point, best_nodes, greedy_multiplier):
         if currentNode is None:
-            return (bestNodes, cutOffDist, ops)
-        ops = ops + 1
+            return
         distance = currentNode.distance(point)
-        if distance < cutOffDist:
-            if type(currentNode.vp) is VPTreeNode:
-                print("vp is node")
-                exit()
-            VPTree.insertSorted(bestNodes, (distance, currentNode.vp))
-            cutOffDist = bestNodes[0][0]
+        best_nodes.incr_ops(1)
+        if distance < best_nodes.get_cutoff_dist():
+            best_nodes.insert((distance, currentNode.vp))
 
         if currentNode.is_leaf:
             if len(currentNode.data) == 1:
-                return (bestNodes, cutOffDist, ops)
-            print("leaf problems")
-            exit()
-            return VPTree.closestLinearSearch(
-                currentNode, point, distance, bestNodes, cutOffDist, ops
-            )
+                return
+            VPTree.closestLinearSearch(currentNode, point, distance, best_nodes)
 
         if distance < currentNode.threshold:
-            (bestNodes, cutOffDist, ops) = VPTree.NNS(
-                currentNode.left, point, bestNodes, cutOffDist, ops, greedy_multiplier
-            )
+            VPTree.NNS( currentNode.left, point, best_nodes, greedy_multiplier)
 
-            if distance + greedy_multiplier * cutOffDist > currentNode.threshold:
-                (bestNodes, cutOffDist, ops) = VPTree.NNS(
-                    currentNode.right,
-                    point,
-                    bestNodes,
-                    cutOffDist,
-                    ops,
-                    greedy_multiplier,
-                )
+            if distance + greedy_multiplier *  best_nodes.get_cutoff_dist() > currentNode.threshold:
+                VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier)
         else:
-            (bestNodes, cutOffDist, ops) = VPTree.NNS(
-                currentNode.right, point, bestNodes, cutOffDist, ops, greedy_multiplier
-            )
+            VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier)
 
-            if distance - greedy_multiplier * cutOffDist < currentNode.threshold:
-                (bestNodes, cutOffDist, ops) = VPTree.NNS(
-                    currentNode.left,
-                    point,
-                    bestNodes,
-                    cutOffDist,
-                    ops,
-                    greedy_multiplier,
-                )
+            if distance - greedy_multiplier * best_nodes.get_cutoff_dist() < currentNode.threshold:
+                VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier)
 
-        return (bestNodes, cutOffDist, ops)
 
-    def closestLinearSearch(currentNode, point, distance, bestNodes, cutOffDist, ops):
-        print("should not be here")
-        if distance - currentNode.threshold < cutOffDist:
-            distances = [(vlmc.distance(point), vlmc) for vlmc in currentNode.data]
-            ops += len(currentNode.data)
+    def closestLinearSearch(currentNode, point, distance, best_nodes):
+        if distance - currentNode.threshold < best_nodes.cutoff_dist:
+            pairs = [(vlmc.distance(point), vlmc) for vlmc in currentNode.data]
+            best_nodes.incr_ops(len(currentNode.data))
             distances.sort(key=itemgetter(0))
-            for distance in distances:
-                if distance[0] < cutOffDist:
-                    VPTree.insertSorted(bestNodes, distance)
-                    cutOffDist = bestNodes[0][0]
-
-        return (bestNodes, cutOffDist, ops)
-
-    def insertSorted(nodeList, item):
-        for i, val in enumerate(nodeList[:-1]):
-            if val[1] > item[1]:
-                nodeList[i] = nodeList[i + 1]
-            else:
-                nodeList[i] = item
-        nodeList[-1] = item
+            for current_pair in pairs:
+                if current_pair[0] < best_nodes.cutoff_dist:
+                    best_nodes.insert(current_pair)
 
     def overlap(tree):
         node_list = []
