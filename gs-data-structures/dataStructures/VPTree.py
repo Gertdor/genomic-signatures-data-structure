@@ -37,12 +37,12 @@ class VPTreeNode:
     def __ne__(self, other):
         return not (self == other)
 
-class NearestNeighbors:
 
+class NearestNeighbors:
     def __init__(self, size, initial_element):
         self._size = size
         self._ops = 0
-        self._node_list = [(float_info.max,None) for i in range(self._size)]
+        self._node_list = [(float_info.max, None) for i in range(self._size)]
         if initial_element is not None:
             self.insert(initial_element)
         self._update_cutoff_dist()
@@ -50,18 +50,18 @@ class NearestNeighbors:
     def _update_cutoff_dist(self):
         self._cutoff_dist = self._node_list[0][0]
 
-    def incr_ops(self, number_of_ops = 1):
-        self._ops+=number_of_ops
-    
+    def incr_ops(self, number_of_ops=1):
+        self._ops += number_of_ops
+
     def get_ops(self):
-        return(self._ops)
+        return self._ops
 
     def get_cutoff_dist(self):
-        return(self._cutoff_dist)
-    
+        return self._cutoff_dist
+
     def get_nodes(self):
-        return(self._node_list)
-    
+        return self._node_list
+
     def get_size(self):
         return self._size
 
@@ -70,11 +70,13 @@ class NearestNeighbors:
             self._node_list = [item]
             self._update_cutoff_dist()
         else:
-            if item[0] > self._node_list[0][0]: # larger than the larget element, can discard
+            if (
+                item[0] > self._node_list[0][0]
+            ):  # larger than the larget element, can discard
                 return
             for i, val in enumerate(self._node_list[1:]):
                 if item[0] < val[0]:
-                    self._node_list[i-1] = self._node_list[i]
+                    self._node_list[i - 1] = self._node_list[i]
                 else:
                     self._node_list[i] = item
                     self._update_cutoff_dist()
@@ -187,7 +189,7 @@ class VPTree:
         """
         dist = tree.distance(point)
         greedy_multiplier = 1 / (greedy_factor)
-        best_nodes = NearestNeighbors(k,(dist,tree.vp))
+        best_nodes = NearestNeighbors(k, (dist, tree.vp))
         VPTree.NNS(tree, point, best_nodes, greedy_multiplier)
         return best_nodes
 
@@ -205,16 +207,21 @@ class VPTree:
             VPTree.closestLinearSearch(currentNode, point, distance, best_nodes)
 
         if distance < currentNode.threshold:
-            VPTree.NNS( currentNode.left, point, best_nodes, greedy_multiplier)
+            VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier)
 
-            if distance + greedy_multiplier *  best_nodes.get_cutoff_dist() > currentNode.threshold:
+            if (
+                distance + greedy_multiplier * best_nodes.get_cutoff_dist()
+                > currentNode.threshold
+            ):
                 VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier)
         else:
             VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier)
 
-            if distance - greedy_multiplier * best_nodes.get_cutoff_dist() < currentNode.threshold:
+            if (
+                distance - greedy_multiplier * best_nodes.get_cutoff_dist()
+                < currentNode.threshold
+            ):
                 VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier)
-
 
     def closestLinearSearch(currentNode, point, distance, best_nodes):
         if distance - currentNode.threshold < best_nodes.cutoff_dist:

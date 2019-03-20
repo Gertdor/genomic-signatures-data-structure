@@ -10,19 +10,24 @@ from clustering_genomic_signatures.util.parse_distance import (
     parse_distance_method,
 )
 
+
 def distance_function_stats(elements):
     distances = np.array(
         [current.distance(other) for current in elements for other in elements]
     )
     print("Stat summary:", stats.describe(distances), "\n")
 
+
 def distance_between_ids(args, pairs, names):
-    args.condition='true'
-    args.distance_function = 'frobenius-norm'
+    args.condition = "true"
+    args.distance_function = "frobenius-norm"
     frobenius_norm = parse_distance_method(args)
     vlmcs = parse_vlmcs(args, "db_config.json")
-    vlmc_dict = dict([(vlmc.name,vlmc) for vlmc in vlmcs])
-    distances = [frobenius_norm.distance(vlmc_dict[names[i]],vlmc_dict[names[j]]) for i,j in pairs]
+    vlmc_dict = dict([(vlmc.name, vlmc) for vlmc in vlmcs])
+    distances = [
+        frobenius_norm.distance(vlmc_dict[names[i]], vlmc_dict[names[j]])
+        for i, j in pairs
+    ]
     return distances
 
 

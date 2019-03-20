@@ -25,7 +25,13 @@ class NNData:
 
     def get_ids_by_factor(self):
         return [
-            [nn[1].identifier for tree in run for NNS in run for knn in NNS for nn in knn[0]]
+            [
+                nn[1].identifier
+                for tree in run
+                for NNS in run
+                for knn in NNS
+                for nn in knn[0]
+            ]
             for run in self.all_runs
         ]
 

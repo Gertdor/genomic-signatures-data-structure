@@ -12,11 +12,12 @@ from clustering_genomic_signatures.util.parse_distance import add_distance_argum
 
 from util.distance_util import distance_between_ids
 
+
 def plot_dist_calc_to_distance(run_data, variance=False):
-    
+
     all_distances = run_data.get_distances_by_factor()
-    all_ops = run_data.get_ops_by_factor(repeat_k = True)
-    all_runs = [zip(a,b) for a,b in zip(all_distances, all_ops)]
+    all_ops = run_data.get_ops_by_factor(repeat_k=True)
+    all_runs = [zip(a, b) for a, b in zip(all_distances, all_ops)]
     all_runs = [[r for r in run] for run in all_runs]
     all_stats = []
     for run in all_runs:
@@ -38,7 +39,7 @@ def plot_dist_calc_to_distance(run_data, variance=False):
 
 def plot_norm_to_gc(run_data):
     fig = plt.figure()
-    run_data = [(r[1],r[0]) for r in run_data]
+    run_data = [(r[1], r[0]) for r in run_data]
     plt.scatter(*zip(*run_data))
     plt.ylabel("Frobenius norm distance to neighbor")
     plt.xlabel("Delta GC-content")
@@ -111,7 +112,7 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
             ) and i < max_distance:
                 i += 1
                 current_neighbor = neighbors[point][i]
-            genus_distances.append((i,(point,neighbors[point][i])))
+            genus_distances.append((i, (point, neighbors[point][i])))
             i = 0
             current_neighbor = neighbors[point][i]
             while (
@@ -121,7 +122,7 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
             ) and i < max_distance:
                 i += 1
                 current_neighbor = neighbors[point][i]
-            family_distances.append((i,(point,neighbors[point][i])))
+            family_distances.append((i, (point, neighbors[point][i])))
 
     return (genus_distances, family_distances)
 
@@ -136,36 +137,36 @@ def plot_signature_dist_to_match(neighbors, names, run_data, max_distance=50):
     family_distances = [f[0] for f in family_distances]
     plt.figure()
     plt.hist(genus_distances, 50, facecolor="blue")
-    plt.xlabel('number of non matching closer neighbors')
-    plt.ylabel('number of occurances')
-    plt.title('distance in signatures to closest signature of the same genus')
+    plt.xlabel("number of non matching closer neighbors")
+    plt.ylabel("number of occurances")
+    plt.title("distance in signatures to closest signature of the same genus")
     plt.figure()
-    plt.xlabel('number of non matching closer neighbors')
-    plt.ylabel('number of occurances')
-    plt.title('distance in signatures to closest signature of the same family')
+    plt.xlabel("number of non matching closer neighbors")
+    plt.ylabel("number of occurances")
+    plt.title("distance in signatures to closest signature of the same family")
     plt.hist(family_distances, 50, facecolor="green")
 
 
-def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distance = 50):
+def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distance=50):
 
     genus_distances, family_distances = _true_distance_to_bio_match(
         neighbors, names, run_data, max_signature_distance
     )
 
-    genus_pairs = [g[1] for g in genus_distances if g[0] < max_signature_distance-1]
-    family_pairs = [f[1] for f in family_distances if f[0] < max_signature_distance-1]
+    genus_pairs = [g[1] for g in genus_distances if g[0] < max_signature_distance - 1]
+    family_pairs = [f[1] for f in family_distances if f[0] < max_signature_distance - 1]
     genus_distances = distance_between_ids(args, genus_pairs, names)
     family_distances = distance_between_ids(args, family_pairs, names)
-    
+
     plt.figure()
     plt.hist(genus_distances, 50, facecolor="blue")
-    plt.xlabel('Frobenius norm distance to closest matching neighbor')
-    plt.ylabel('number of occurances')
-    plt.title('frobenius norm distance to closest signature of the same genus')
+    plt.xlabel("Frobenius norm distance to closest matching neighbor")
+    plt.ylabel("number of occurances")
+    plt.title("frobenius norm distance to closest signature of the same genus")
     plt.figure()
-    plt.xlabel('frobenius distance to closest matching neighbor')
-    plt.ylabel('number of occurances')
-    plt.title('frobenius norm distance to closest signature of the same family')
+    plt.xlabel("frobenius distance to closest matching neighbor")
+    plt.ylabel("number of occurances")
+    plt.title("frobenius norm distance to closest signature of the same family")
     plt.hist(family_distances, 50, facecolor="green")
 
 
@@ -186,7 +187,7 @@ def exact_matches(neighbors, names, run_data):
 
 
 def biological_accuracy(neighbors, names, run_data, db_config_path):
-    
+
     signatures_used = run_data.get_signatures_used()
     greedy_factors = run_data.get_greedy_factors()
 
@@ -214,7 +215,7 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         _number_of_equal_elements(families, families_current_try)
         for families_current_try in found_families
     ]
-    
+
     genus_matches = np.array(genus_matches) / len(searched_points)
     family_matches = np.array(family_matches) / len(searched_points)
 
@@ -254,7 +255,7 @@ def _nearest_neighbor_in_tree(neighbor_array, tree, points):
     elements_in_tree = np.zeros(number_of_elements)
     neighbors = []
 
-    for elem in tree: # Want the ones not in the tree still to be 0
+    for elem in tree:  # Want the ones not in the tree still to be 0
         elements_in_tree[elem] = 1
 
     for point in points:
@@ -294,11 +295,16 @@ parser.add_argument(
     "--norm_to_gc", action="store_true", help="plot NN distance to gc distance"
 )
 parser.add_argument(
-    "--test_all",action='store_true',help="Should all functions be tested with a small test set")
+    "--test_all",
+    action="store_true",
+    help="Should all functions be tested with a small test set",
+)
 
 parser.add_argument(
-    "--fn_dist_to_match", action='store_true',
-    help="calculate the frobenius norm distance to the nearest signature of the same genus/family",)
+    "--fn_dist_to_match",
+    action="store_true",
+    help="calculate the frobenius norm distance to the nearest signature of the same genus/family",
+)
 
 parser.add_argument("--input_file", help="file name of greedy run data")
 parser.add_argument(
@@ -320,15 +326,15 @@ if args.test_all:
 
     with open("data/test_sets/greedy_factor_test.pickle", "rb") as f:
         run_data = pickle.load(f)
-    
+
     with open("data/test_sets/small_distance.pickle", "rb") as f:
         (neighbors, names) = pickle.load(f)
-    
+
     box_plot_dist(run_data)
     box_plot_dist_calcs(run_data)
     plot_dist_calc_to_distance(run_data, False)
     plot_FN_dist_to_match(args, neighbors, names, run_data)
-    plot_signature_dist_to_match(neighbors,names,run_data)
+    plot_signature_dist_to_match(neighbors, names, run_data)
     exact_matches(neighbors, names, run_data)
     biological_accuracy(neighbors, names, run_data, db_config_path)
     plt.show()
@@ -347,22 +353,27 @@ if args.boxplots:
 if args.acc_to_dist:
     plot_dist_calc_to_distance(run_data, False)
 
-if (args.bio_accuracy or args.dist_to_match or args.exact_matches or args.fn_dist_to_match):
+if (
+    args.bio_accuracy
+    or args.dist_to_match
+    or args.exact_matches
+    or args.fn_dist_to_match
+):
 
     with open(args.distance_file, "rb") as f:
         (neighbors, names) = pickle.load(f)
-    
-    if(args.fn_dist_to_match):
-        plot_FN_dist_to_match(args, neighbors,names,run_data)
+
+    if args.fn_dist_to_match:
+        plot_FN_dist_to_match(args, neighbors, names, run_data)
 
     if args.exact_matches:
         exact_matches(neighbors, names, run_data)
 
     if args.bio_accuracy:
         biological_accuracy(neighbors, names, run_data, db_config_path)
-    
+
     if args.dist_to_match:
-        plot_signature_dist_to_match(neighbors,names,run_data)
+        plot_signature_dist_to_match(neighbors, names, run_data)
 
 plt.style.use("seaborn-whitegrid")
 plt.show()
