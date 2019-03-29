@@ -18,6 +18,9 @@ class VPTreeNode:
 
     def distance(self, other):
         return self.vp.distance(other)
+    
+    def fast_distance(self, other):
+        return self.vp.fast_distance(other)
 
     def __str__(self):
         if self.data is not None:
@@ -62,6 +65,12 @@ class NearestNeighbors:
     def get_nodes(self):
         return self._node_list
 
+    def get_ids(self):
+        return [nn[1].identifier for nn in self._node_list]
+
+    def get_distances(self):
+        return [nn[0] for nn in self._node_list]
+
     def get_size(self):
         return self._size
 
@@ -83,7 +92,6 @@ class NearestNeighbors:
                     return
             self._node_list[-1] = item
             self._update_cutoff_dist()
-
 
 class VPTree:
     def save(tree, fileName):
@@ -168,7 +176,7 @@ class VPTree:
             print()
             print(indent, "}", end="", sep="")
 
-    def nearestNeighbour(tree, point, k=1, greedy_factor=1):
+    def nearestNeighbour(tree, point, k=1, greedy_factor=1, gc_pruning=False):
         """ Find the k nearest neighbors of 'point' in the VP tree
             
             Keyword arguments:
@@ -181,6 +189,9 @@ class VPTree:
                              better to be considered.
                              For example: with greedy factor 2, and a current neighbor distance 10 away
                              only nodes 2 times closer, distance 5 or closer, are considered.
+            gc-pruning -- should gc distance be used as a lower bound when calculating
+                          distances. This requires the tree to be created with nodes
+                          having a .fast_distance(self,other)
 
             Returns a tuple format with the following format:
                 ([(distance, neighbor)],distance to furthest neighbor, number of distance calculations) 
@@ -190,39 +201,75 @@ class VPTree:
         dist = tree.distance(point)
         greedy_multiplier = 1 / (greedy_factor)
         best_nodes = NearestNeighbors(k, (dist, tree.vp))
-        VPTree.NNS(tree, point, best_nodes, greedy_multiplier)
+        VPTree.NNS(tree, point, best_nodes, greedy_multiplier, gc_pruning)
         return best_nodes
 
-    def NNS(currentNode, point, best_nodes, greedy_multiplier):
+    def NNS(currentNode, point, best_nodes, greedy_multiplier, gc_pruning):
         if currentNode is None:
             return
-        distance = currentNode.distance(point)
-        best_nodes.incr_ops(1)
-        if distance < best_nodes.get_cutoff_dist():
-            best_nodes.insert((distance, currentNode.vp))
+        if gc_pruning:
+            true_dist = False
+            distance = currentNode.fast_distance(point)
+        else:
+            true_dist = True
+            distance = currentNode.distance(point)
+            best_nodes.incr_ops(1)
 
+        if distance < best_nodes.get_cutoff_dist():
+            if gc_pruning:
+                distance = currentNode.distance(point)
+                best_nodes.incr_ops(1)
+                true_dist = True
+                if distance < best_nodes.get_cutoff_dist():
+                    best_nodes.insert((distance,currentNode.vp))
+            else:
+                best_nodes.insert((distance, currentNode.vp))
+        
         if currentNode.is_leaf:
             if len(currentNode.data) == 1:
                 return
-            VPTree.closestLinearSearch(currentNode, point, distance, best_nodes)
+            else:
+                VPTree.closestLinearSearch(currentNode, point, distance, best_nodes, gc_pruning, true_dist)
 
-        if distance < currentNode.threshold:
-            VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier)
-
-            if (
-                distance + greedy_multiplier * best_nodes.get_cutoff_dist()
-                > currentNode.threshold
-            ):
-                VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier)
+        if gc_pruning and not true_dist:
+            VPTree._explore_children_gc_prune(
+                currentNode, point, distance, best_nodes, greedy_multiplier, gc_pruning)
         else:
-            VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier)
+            VPTree._explore_children(currentNode, point, distance, best_nodes, greedy_multiplier, gc_pruning)
 
+    def _explore_children(currentNode, point, distance, best_nodes, greedy_multiplier, gc_pruning):
+        if distance > currentNode.threshold:
+            VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier, gc_pruning)
+            if(distance - greedy_multiplier * best_nodes.get_cutoff_dist() < currentNode.threshold):
+                VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier,gc_pruning)
+        else:
+            VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier, gc_pruning)
+            if(distance + greedy_multiplier * best_nodes.get_cutoff_dist() > currentNode.threshold):
+                VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier, gc_pruning)
+
+    def _explore_children_gc_prune(currentNode, point, distance, best_nodes, greedy_multiplier, gc_pruning):
+        
+        if distance*1 > currentNode.threshold:
+            VPTree.NNS(currentNode.right, point, best_nodes, greedy_multiplier, gc_pruning)
             if (
-                distance - greedy_multiplier * best_nodes.get_cutoff_dist()
+                distance*1 - greedy_multiplier * best_nodes.get_cutoff_dist()
                 < currentNode.threshold
             ):
-                VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier)
+                distance = currentNode.distance(point)
+                best_nodes.incr_ops(1)
+                if (
+                    distance - greedy_multiplier * best_nodes.get_cutoff_dist()
+                    > currentNode.threshold
+                ):
+                    return
 
+                VPTree.NNS(currentNode.left, point, best_nodes, greedy_multiplier, gc_pruning)
+        else:
+                distance = currentNode.distance(point)
+                best_nodes.incr_ops(1)
+                VPTree._explore_children(currentNode, point, distance, best_nodes, greedy_multiplier, gc_pruning)
+            
+    
     def closestLinearSearch(currentNode, point, distance, best_nodes):
         if distance - currentNode.threshold < best_nodes.cutoff_dist:
             pairs = [(vlmc.distance(point), vlmc) for vlmc in currentNode.data]

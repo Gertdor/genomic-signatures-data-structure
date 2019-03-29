@@ -2,9 +2,10 @@ import sys
 import time
 import argparse
 import pickle
-
+from itertools import product
 import numpy as np
 from scipy import stats
+import pdb
 
 sys.path.append(
     "/home/basse/Documents/skola/masterThesis/clustering-genomic-signatures-private"
@@ -53,10 +54,22 @@ def greedy_factor_test(elements, output_file, args):
     greedy_factors = np.linspace(
         args.greedy_start, args.greedy_end, args.greedy_num_samples
     )
-    all_runs = [[] for i in range(args.greedy_num_samples)]
+    if args.gc_prune:
+        gc_prune = [True,False]
+    else:
+        gc_prune = [False]
+    if args.k_test:
+        k_values = [k+1 for k in range(args.k)]
+    else:
+        k_values = [args.k]
+    
+    all_runs = {}
+    factors = [p for p in product(greedy_factors,k_values,gc_prune)]
+    for factor in factors:
+        all_runs[factor] = []
     all_signatures_used = []
-    for run_nbr in range(args.number_of_runs):
 
+    for run_nbr in range(args.number_of_runs):
         print("current run number:", run_nbr)
         (tree_elems, search_elems) = _split_elements(elements, args)
         tree = VPTree.createVPTree(
@@ -65,19 +78,24 @@ def greedy_factor_test(elements, output_file, args):
         tree_elem_names = [elem.identifier for elem in tree_elems]
         search_elem_names = [elem.identifier for elem in search_elems]
         all_signatures_used.append((tree_elem_names, search_elem_names))
-        for (i, greedy_factor) in enumerate(greedy_factors):
-
-            run_NNS = [
-                VPTree.nearestNeighbour(tree, elem, args.k, greedy_factor)
-                for elem in search_elems
-            ]
-
-            run_stats = [(NN.get_nodes(), NN.get_ops()) for NN in run_NNS]
-            all_runs[i].append(run_stats)
-
-    data = NNData(all_runs, greedy_factors, all_signatures_used)
+        for factor in factors:
+            run_NNS = one_nn_search_run(tree, search_elems,factor)
+            
+            run_stats = [nn for nn in run_NNS]
+            all_runs[factor].append(run_stats)
+    
+    data = NNData(all_runs, all_signatures_used, factors)
     with open(output_file, "wb") as f:
         pickle.dump(data, f)
+
+# TODO can make factors a named tuple, might be easer to read
+def one_nn_search_run(tree, search_elems,factors):
+
+   run_NNS = [
+       VPTree.nearestNeighbour(tree, elem, factors[1],factors[0],factors[2])
+       for elem in search_elems
+   ]
+   return run_NNS
 
 
 def multipleNNSearches(elements, args, print_results=True):
@@ -94,7 +112,7 @@ def multipleNNSearches(elements, args, print_results=True):
 
 def _split_elements(elems, args):
 
-    if args.randomize_elements:
+    if not args.no_randomize_elements:
         elements = elems.copy()
         np.random.shuffle(elements)
     else:
@@ -127,7 +145,7 @@ def NNSearch(elements, args, print_results=True):
 
     start_time = time.time()
     NNS = [
-        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor)
+        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor, args.gc_prune)
         for elem in search_elements
     ]
     total_time = time.time() - start_time
@@ -136,7 +154,6 @@ def NNSearch(elements, args, print_results=True):
         print("time per element", total_time / elementsChecked)
         printNNS(NNS)
     return NNS
-
 
 # Does not really work. In top ~20%
 def lowDimTree(vlmcs, vlmcElements, args):
@@ -312,9 +329,9 @@ parser.add_argument(
     "--k", type=int, default=1, help="how many neighbours should be found? default=1"
 )
 parser.add_argument(
-    "--randomize_elements",
+    "--no_randomize_elements",
     action="store_true",
-    help="should the elements to be stored/quiered be randomized",
+    help="should the elements to be stored/quiered not be randomized",
 )
 parser.add_argument(
     "--number_of_runs",
@@ -363,7 +380,12 @@ parser.add_argument(
 parser.add_argument(
     "-o", default="greedy_test.pickle", help="output file name of greedy test results"
 )
-
+parser.add_argument(
+    "--gc_prune", action='store_true',help="should gc distance be used to prune the search results"
+)
+parser.add_argument(
+    "--k_test", action='store_true', help="should the effect of different k values be tested?"
+)
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
 args = parser.parse_args()
@@ -371,7 +393,11 @@ args = parser.parse_args()
 vlmcs = parse_vlmcs(args, "db_config.json")
 print("number of vlmcs:", len(vlmcs))
 distance_function = parse_distance_method(args)
-elements = [VPTreeVLMC(vlmc, distance_function, i) for i, vlmc in enumerate(vlmcs)]
+tmp = args.distance_function
+args.distance_function = "gc-content"
+fast_dist = parse_distance_method(args)
+args.distance_function = tmp
+elements = [VPTreeVLMC(vlmc, distance_function, i, fast_dist) for i, vlmc in enumerate(vlmcs)]
 
 if args.overlap:
     if args.num:
@@ -395,7 +421,7 @@ if not args.no_nn_test:
             multipleNNSearches(elements, args)
 
 if args.greedy_test:
-    greedy_factor_test(elements, "greedy_factor_test.pickle", args)
+    greedy_factor_test(elements, args.o, args)
 
 if args.low_dim_tree:
     lowDimTree(vlmcs, elements)
