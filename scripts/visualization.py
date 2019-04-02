@@ -1,8 +1,10 @@
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import Colormap
 import argparse
 
+from collections import Counter
 from scipy import stats
 from clustering_genomic_signatures.dbtools.get_signature_metadata import (
     get_metadata_for,
@@ -52,16 +54,20 @@ def box_plot_dist(run_data):
     distances = run_data.get_distances_by_factor()
     greedy_factors = run_data.get_greedy_factors()
     k_values = run_data.get_k_values()
-    
+
     fig = plt.figure()
     border_width = 0.1
-    ax_size = [0+border_width, 0+2*border_width, 
-               1-2*border_width, 1-3*border_width]
+    ax_size = [
+        0 + border_width,
+        0 + 2 * border_width,
+        1 - 2 * border_width,
+        1 - 3 * border_width,
+    ]
     ax = fig.add_axes(ax_size)
     ax.boxplot(distances)
-    
+
     pruning_factors = [str(round(x, 2)) for x in greedy_factors]
-    xlabels = ["P:"+p+"  K:"+str(k) for (p,k) in zip(pruning_factors,k_values)]
+    xlabels = ["P:" + p + "  K:" + str(k) for (p, k) in zip(pruning_factors, k_values)]
     ax.set_xticklabels(xlabels)
     plt.xticks(rotation=65)
     plt.xlabel("pruning factor (P) and number of neighbors (K)")
@@ -77,13 +83,12 @@ def box_plot_dist_calcs(run_data):
 
     fig = plt.figure()
     border_width = 0.1
-    ax_size = [0.1, 0+2*border_width, 
-               1-2*border_width, 1-3*border_width]
+    ax_size = [0.1, 0 + 2 * border_width, 1 - 2 * border_width, 1 - 3 * border_width]
     ax = fig.add_axes(ax_size)
     ax.boxplot(distances)
 
     pruning_factors = [str(round(x, 2)) for x in greedy_factors]
-    xlabels = ["P:"+p+"  K:"+str(k) for (p,k) in zip(pruning_factors,k_values)]
+    xlabels = ["P:" + p + "  K:" + str(k) for (p, k) in zip(pruning_factors, k_values)]
     ax.set_xticklabels(xlabels)
     plt.xticks(rotation=65)
     plt.xlabel("pruning factor (P) and number of neighbors (K)")
@@ -93,13 +98,21 @@ def box_plot_dist_calcs(run_data):
     plt.title("Pruning effect on the number of distance calculations made")
 
 
-def _get_found_points(neighbors, run_data, include_ground_truth=True):
+def _get_found_points(neighbors, run_data, include_ground_truth=True, un_pack=True):
 
-    found_neighbors = run_data.get_ids_by_factor()
-    signatures_used = run_data.get_signatures_used()
+    print("MAIN UNPACK", un_pack)
+    found_neighbors = run_data.get_ids_by_factor(un_pack)
 
     if include_ground_truth:
-        true_nns = _nearest_neighbor_in_all_trees(neighbors, signatures_used)
+        signatures_used = run_data.get_signatures_used()
+        if un_pack:
+            true_nns = _nearest_neighbor_in_all_trees(neighbors, signatures_used)
+        else:
+            true_nns = [
+                [nn]
+                for nn in _nearest_neighbor_in_all_trees(neighbors, signatures_used)
+            ]
+
         found_neighbors.insert(0, true_nns)
 
     return found_neighbors
@@ -125,12 +138,12 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
                 or current_neighbor == point
             ) and i < max_distance:
                 if current_neighbor in tree:
-                    dist +=1
+                    dist += 1
                 i += 1
                 current_neighbor = neighbors[point][i]
             genus_distances.append((dist, (point, neighbors[point][i])))
             i = 0
-            dist=0
+            dist = 0
             current_neighbor = neighbors[point][i]
             while (
                 current_family != meta_data[names[current_neighbor]]["family"]
@@ -138,7 +151,7 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
                 or current_neighbor == point
             ) and i < max_distance:
                 if current_neighbor in tree:
-                    dist+=1
+                    dist += 1
                 i += 1
                 current_neighbor = neighbors[point][i]
             family_distances.append((dist, (point, neighbors[point][i])))
@@ -188,16 +201,17 @@ def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distan
     plt.title("frobenius norm distance to closest signature of the same family")
     plt.hist(family_distances, 50, facecolor="green")
 
+
 # TODO maybe a bug, look over this?
 def exact_matches(neighbors, names, run_data):
-    all_points = _get_found_points(neighbors, run_data, True)
+    all_points = _get_found_points(neighbors, run_data, include_ground_truth=True)
     ground_truth = all_points[0]
     rest = all_points[1:]
     number_of_matches = [
-        _number_of_equal_elements(ground_truth, current) for current in rest
+        sum(_number_of_equal_elements(ground_truth, current)) for current in rest
     ]
 
-    print("number of matches: ",number_of_matches)
+    print("number of matches: ", number_of_matches)
     fig = plt.figure()
     ax = plt.axes()
     ax.scatter(range(len(number_of_matches)), number_of_matches)
@@ -209,69 +223,106 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
     signatures_used = run_data.get_signatures_used()
     greedy_factors = run_data.get_greedy_factors()
     k_values = run_data.get_k_values()
-    k_values.insert(0,1) # add k=1 for brute_force
+    # k_values.insert(0,1) # add k=1 for brute_force
 
     meta_data = get_metadata_for(names.tolist(), db_config_path)
-    found_neighbors = _get_found_points(neighbors, run_data)
-
+    found_neighbors = _get_found_points(
+        neighbors, run_data, include_ground_truth=True, un_pack=False
+    )
     searched_points = [i for batch in signatures_used for i in batch[1]]
     genuses = [meta_data[names[point]]["genus"] for point in searched_points]
     families = [meta_data[names[point]]["family"] for point in searched_points]
 
     found_genuses = [
-        [meta_data[names[nn]]["genus"] for nn in found_neighbor]
+        [[meta_data[names[nn]]["genus"] for nn in NNS] for NNS in found_neighbor]
         for found_neighbor in found_neighbors
     ]
     found_families = [
-        [meta_data[names[nn]]["family"] for nn in found_neighbor]
+        [[meta_data[names[nn]]["family"] for nn in NNS] for NNS in found_neighbor]
         for found_neighbor in found_neighbors
     ]
 
     genus_matches = [
-        _number_of_equal_elements(np.repeat(genuses,k), genuses_current_try)
-        for k,genuses_current_try in zip(k_values,found_genuses)
+        [NNS.count(query) for query, NNS in zip(genuses, run)] for run in found_genuses
     ]
 
     family_matches = [
-        _number_of_equal_elements(np.repeat(families,k), families_current_try)
-        for k,families_current_try in zip(k_values,found_families)
+        [NNS.count(query) for query, NNS in zip(families, run)]
+        for run in found_families
     ]
 
-    genus_matches = np.array(genus_matches) / len(searched_points)
-    family_matches = np.array(family_matches) / len(searched_points)
+    # genus_matches = (np.array(genus_matches) / len(searched_points))/np.array(k_values)
+    # family_matches = (np.array(family_matches) / len(searched_points))/np.array(k_values)
+    max_k = max(k_values)
+    genus_data_to_plot = [Counter(genus_match) for genus_match in genus_matches]
+    genus_data_to_plot = [
+        [counter[key] for key in range(max_k + 1)] for counter in genus_data_to_plot
+    ]
 
+    family_data_to_plot = [Counter(family_match) for family_match in family_matches]
+    family_data_to_plot = [
+        [counter[key] for key in range(max_k + 1)] for counter in family_data_to_plot
+    ]
+    k_values = run_data.get_k_values()
+
+    # pruning_factors = [round(x, 2) for x in greedy_factors]
+    xlabels = ["brute force"] + [
+        "P:" + str(round(p, 2)) + "  K:" + str(round(k, 2))
+        for (p, k) in zip(greedy_factors, k_values)
+    ]
     # TODO seaborn nicer bars
+
+    _bio_acc_bar_plot(
+        data=family_data_to_plot,
+        title="The effect of pruning factor on classification accuracy of family",
+        x_descript="hyper-parameters, P=pruning factor, K = number of neighbors",
+        y_descript="frequency at which exactly [color] of the nearest neighbors were of the same family",
+        x_tick_labels=xlabels,
+        max_k=max(k_values),
+    )
+
+    _bio_acc_bar_plot(
+        data=genus_data_to_plot,
+        title="The effect of pruning factor on classification accuracy of genus",
+        x_descript="hyper-parameters, P=pruning factor, K = number of neighbors",
+        y_descript="frequency at which exactly [color] of the nearest neighbors were of the same genus",
+        x_tick_labels=xlabels,
+        max_k=max(k_values),
+    )
+
+
+def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k):
 
     fig = plt.figure()
     border_width = 0.1
-    ax_size = [0+border_width, 0+2*border_width, 
-               1-2*border_width, 1-3*border_width]
+    ax_size = [
+        0 + border_width,
+        0 + 2 * border_width,
+        1 - 2 * border_width,
+        1 - 3 * border_width,
+    ]
     ax = fig.add_axes(ax_size)
 
-    k_values = run_data.get_k_values()
-    pruning_factors = [round(x, 2) for x in greedy_factors]
-    xlabels = ["brute force"] + ["P:"+str(round(p,2))+"  K:"+str(round(k,2)) for (p,k) in zip(greedy_factors,k_values)]
-    ax.set_xticklabels(xlabels)
-    plt.xticks(rotation=65)
-    
-    bar_width = 0.6
-    bar_loc = np.arange(len(xlabels)) * 1.5
-    bars1 = ax.bar(bar_loc, genus_matches, width=bar_width, color="g")
-    bars2 = ax.bar(bar_loc + bar_width, family_matches, width=bar_width, color="b")
+    xlabel_locs = np.arange(0, len(x_tick_labels) * (max_k + 3), step=(max_k + 3))
+    plt.xticks(xlabel_locs, x_tick_labels, rotation=65)
+    bar_width = 0.8
 
-    ax.set_title("The effect of pruning factor on classification accuracy")
-    ax.set_xlabel("pruning factor")
-    ax.set_ylabel("prediction accuracy")
-    ax.set_xticks(bar_loc + bar_width / 2)
-    ax.set_xticklabels(xlabels)
-    ax.legend((bars1[0], bars2[0]), ("genus", "family"))
+    colors = plt.cm.Accent(np.linspace(0, 1, 8))
+    for i, genus in enumerate(data):
+        for j, freq in enumerate(genus):
+            ax.bar(i * (max_k + 3) + j + 1, freq, color=colors[j])
 
-    print("genus matches", genus_matches)
-    print("family_matches", family_matches)
+    for i in range(max_k + 1):
+        ax.bar(0, 0, color=colors[i], label=str(i))
+
+    ax.set_title(title)
+    ax.set_xlabel(x_descript)
+    ax.set_ylabel(y_descript)
+    ax.legend()
 
 
 def _number_of_equal_elements(list1, list2):
-    return sum([x==y for x, y in zip(list1, list2)])
+    return [x == y for x, y in zip(list1, list2)]
 
 
 def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):

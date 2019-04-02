@@ -14,9 +14,9 @@ class VPTreeVLMC:
     def distance(self, other):
         return self.dist_func.distance(self.value, other.value)
 
-    def fast_distance(self,other):
-        if(self.fast_dist_func is not None):
-            return self.fast_dist_func.distance(self.value,other.value)
+    def fast_distance(self, other):
+        if self.fast_dist_func is not None:
+            return self.fast_dist_func.distance(self.value, other.value)
         else:
             raise NotImplementedError()
 
