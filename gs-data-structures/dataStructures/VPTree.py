@@ -49,7 +49,7 @@ class NearestNeighbors:
         self._update_cutoff_dist()
 
     def _update_cutoff_dist(self):
-        self._cutoff_dist = self._node_list[0][0]
+        self._cutoff_dist = self._node_list[-1][0]
 
     def incr_ops(self, number_of_ops=1):
         self._ops += number_of_ops
@@ -73,24 +73,10 @@ class NearestNeighbors:
         return self._size
 
     def insert(self, item):
-        if self._size == 1:
-            self._node_list = [item]
-            self._update_cutoff_dist()
-        else:
-            if (
-                item[0] > self._node_list[0][0]
-            ):  # larger than the larget element, can discard
-                return
-            for i, val in enumerate(self._node_list[1:]):
-                if item[0] < val[0]:
-                    self._node_list[i - 1] = self._node_list[i]
-                else:
-                    self._node_list[i] = item
-                    self._update_cutoff_dist()
-                    return
+        if item[0] < self._cutoff_dist:
             self._node_list[-1] = item
+            self._node_list.sort(key=itemgetter(0))
             self._update_cutoff_dist()
-
 
 class VPTree:
     def save(tree, fileName):
