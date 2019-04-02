@@ -136,7 +136,7 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
                 current_genus != meta_data[names[current_neighbor]]["genus"]
                 or current_neighbor not in tree
                 or current_neighbor == point
-            ) and i < max_distance:
+            ) and dist < max_distance and i < len(neighbors[point])-1:
                 if current_neighbor in tree:
                     dist += 1
                 i += 1
@@ -149,7 +149,7 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
                 current_family != meta_data[names[current_neighbor]]["family"]
                 or current_neighbor not in tree
                 or current_neighbor == point
-            ) and i < max_distance:
+            ) and (dist < max_distance and i < len(neighbors[point])-1):
                 if current_neighbor in tree:
                     dist += 1
                 i += 1
@@ -168,7 +168,7 @@ def plot_signature_dist_to_match(neighbors, names, run_data, max_distance=50):
     genus_distances = [g[0] for g in genus_distances]
     family_distances = [f[0] for f in family_distances]
     plt.figure()
-    plt.hist(genus_distances, 50, facecolor="blue")
+    plt.hist(genus_distances, max_distance, facecolor="blue")
     plt.xlabel("number of non matching closer neighbors")
     plt.ylabel("number of occurances")
     plt.title("distance in signatures to closest signature of the same genus")
@@ -176,7 +176,7 @@ def plot_signature_dist_to_match(neighbors, names, run_data, max_distance=50):
     plt.xlabel("number of non matching closer neighbors")
     plt.ylabel("number of occurances")
     plt.title("distance in signatures to closest signature of the same family")
-    plt.hist(family_distances, 50, facecolor="green")
+    plt.hist(family_distances, max_distance, facecolor="green")
 
 
 def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distance=50):
