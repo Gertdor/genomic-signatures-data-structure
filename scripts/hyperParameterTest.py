@@ -16,9 +16,10 @@ from clustering_genomic_signatures.util.parse_distance import (
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VLMCElement import VPTreeVLMC
 from util.NN_data import NNData
+from util.splitElements import split_elements
 
 
-def greedy_factor_test(elements, args):
+def hyper_parameter_test(elements, args):
     """ Perform a test on how the greedy factor effects different metrics
 
         Input
@@ -57,7 +58,7 @@ def greedy_factor_test(elements, args):
 
     for run_nbr in range(args.number_of_runs):
         print("current run number:", run_nbr)
-        (tree_elems, search_elems) = _split_elements(elements, args)
+        (tree_elems, search_elems) = split_elements(elements, args)
         tree = VPTree.createVPTree(
             tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size
         )
@@ -82,26 +83,6 @@ def one_nn_search_run(tree, search_elems, factors):
         for elem in search_elems
     ]
     return run_NNS
-
-
-def _split_elements(elems, args):
-
-    elements = elems.copy()
-    np.random.shuffle(elements)
-
-    num_elem_in_tree = round(len(elements) * args.cutoff)
-    if (
-        args.number_of_searches == 0
-        or args.number_of_searches + num_elem_in_tree > len(elements)
-    ):
-        args.number_of_searches = len(elements) - num_elem_in_tree
-
-    tree_elements = elements[0:num_elem_in_tree]
-    search_elements = elements[
-        num_elem_in_tree : num_elem_in_tree + args.number_of_searches
-    ]
-
-    return (tree_elements, search_elements)
 
 
 parser = argparse.ArgumentParser(description="test args")
@@ -191,6 +172,11 @@ parser.add_argument(
     default=1,
     help="The largest size a leaf may take in the tree",
 )
+parser.add_argument(
+    "--no_randomize_elements",
+    action="store_true",
+    help="should the elements to be stored/quiered not be randomized",
+)
 
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
@@ -208,4 +194,4 @@ elements = [
     VPTreeVLMC(vlmc, distance_function, i, fast_dist) for i, vlmc in enumerate(vlmcs)
 ]
 
-greedy_factor_test(elements, args)
+hyper_parameter_test(elements, args)
