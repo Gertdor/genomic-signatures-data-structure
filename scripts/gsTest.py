@@ -54,12 +54,12 @@ def greedy_factor_test(elements, output_file, args):
     greedy_factors = np.linspace(
         args.greedy_start, args.greedy_end, args.greedy_num_samples
     )
-    if args.gc_prune:
+    if args.gc_prune_test:
         gc_prune = [True, False]
     else:
-        gc_prune = [False]
+        gc_prune = [True]
     if args.k_test:
-        k_values = [k + 1 for k in range(args.k)]
+        k_values = np.arange(args.k_start, args.k_end, args.k_step)
     else:
         k_values = [args.k]
 
@@ -146,7 +146,7 @@ def NNSearch(elements, args, print_results=True):
 
     start_time = time.time()
     NNS = [
-        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor, args.gc_prune)
+        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor, args.gc_prune_test)
         for elem in search_elements
     ]
     total_time = time.time() - start_time
@@ -383,7 +383,7 @@ parser.add_argument(
     "-o", default="greedy_test.pickle", help="output file name of greedy test results"
 )
 parser.add_argument(
-    "--gc_prune",
+    "--gc_prune_test",
     action="store_true",
     help="should gc distance be used to prune the search results",
 )
@@ -392,6 +392,22 @@ parser.add_argument(
     action="store_true",
     help="should the effect of different k values be tested?",
 )
+parser.add_argument(
+    "--k_start",
+    type=int,
+    help="initial value of k if running k_test"
+)
+parser.add_argument(
+    "--k_end",
+    type=int,
+    help="maximum value of k if running k_test"
+)
+parser.add_argument(
+    "--k_step",
+    type=int,
+    help="step size of k if running k_test"
+)
+
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
 args = parser.parse_args()
