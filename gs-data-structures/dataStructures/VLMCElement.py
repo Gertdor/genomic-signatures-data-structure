@@ -20,6 +20,12 @@ class VPTreeVLMC:
         else:
             raise NotImplementedError()
 
+    def get_id(self):
+        return self.identifier
+
+    def get_name(self):
+        return self.value.name
+
     def __eq__(self, other):
         return self.identifier == other.identifier
 

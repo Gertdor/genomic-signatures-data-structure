@@ -18,6 +18,9 @@ from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VLMCElement import VPTreeVLMC
 from util.NN_data import NNData
 from util.splitElements import split_elements
+from clustering_genomic_signatures.dbtools.get_signature_metadata import (
+    get_metadata_for,
+)
 
 
 def hyper_parameter_test(elements, meta_data, args):
@@ -187,8 +190,11 @@ parser.add_argument(
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
 args = parser.parse_args()
+db_config_path = "db_config.json"
 
-vlmcs = parse_vlmcs(args, "db_config.json")
+vlmcs = parse_vlmcs(args, db_config_path)
+names = [vlmc.name for vlmc in vlmcs]
+meta_data = get_metadata_for(names, db_config_path)
 print("number of vlmcs:", len(vlmcs))
 distance_function = parse_distance_method(args)
 tmp = args.distance_function

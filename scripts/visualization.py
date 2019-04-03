@@ -1,8 +1,10 @@
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from matplotlib.colors import Colormap
 import argparse
+import pandas as pd
 
 from collections import Counter
 from scipy import stats
@@ -58,10 +60,10 @@ def box_plot_dist(run_data):
     fig = plt.figure()
     border_width = 0.1
     ax_size = [
-        0 + border_width,
-        0 + 2 * border_width,
-        1 - 2 * border_width,
-        1 - 3 * border_width,
+        border_width,
+        2 * border_width,
+        1 - (2 * border_width),
+        1 - (3 * border_width),
     ]
     ax = fig.add_axes(ax_size)
     ax.boxplot(distances)
@@ -100,7 +102,6 @@ def box_plot_dist_calcs(run_data):
 
 def _get_found_points(neighbors, run_data, include_ground_truth=True, un_pack=True):
 
-    print("MAIN UNPACK", un_pack)
     found_neighbors = run_data.get_ids_by_factor(un_pack)
 
     if include_ground_truth:
@@ -133,10 +134,14 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
             current_family = meta_data[names[point]]["family"]
             current_neighbor = neighbors[point][i]
             while (
-                current_genus != meta_data[names[current_neighbor]]["genus"]
-                or current_neighbor not in tree
-                or current_neighbor == point
-            ) and dist < max_distance and i < len(neighbors[point])-1:
+                (
+                    current_genus != meta_data[names[current_neighbor]]["genus"]
+                    or current_neighbor not in tree
+                    or current_neighbor == point
+                )
+                and dist < max_distance
+                and i < len(neighbors[point]) - 1
+            ):
                 if current_neighbor in tree:
                     dist += 1
                 i += 1
@@ -149,7 +154,7 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
                 current_family != meta_data[names[current_neighbor]]["family"]
                 or current_neighbor not in tree
                 or current_neighbor == point
-            ) and (dist < max_distance and i < len(neighbors[point])-1):
+            ) and (dist < max_distance and i < len(neighbors[point]) - 1):
                 if current_neighbor in tree:
                     dist += 1
                 i += 1
@@ -223,12 +228,11 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
     signatures_used = run_data.get_signatures_used()
     greedy_factors = run_data.get_greedy_factors()
     k_values = run_data.get_k_values()
-    # k_values.insert(0,1) # add k=1 for brute_force
-
     meta_data = get_metadata_for(names.tolist(), db_config_path)
     found_neighbors = _get_found_points(
         neighbors, run_data, include_ground_truth=True, un_pack=False
     )
+
     searched_points = [i for batch in signatures_used for i in batch[1]]
     genuses = [meta_data[names[point]]["genus"] for point in searched_points]
     families = [meta_data[names[point]]["family"] for point in searched_points]
@@ -251,8 +255,6 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         for run in found_families
     ]
 
-    # genus_matches = (np.array(genus_matches) / len(searched_points))/np.array(k_values)
-    # family_matches = (np.array(family_matches) / len(searched_points))/np.array(k_values)
     max_k = max(k_values)
     genus_data_to_plot = [Counter(genus_match) for genus_match in genus_matches]
     genus_data_to_plot = [
@@ -265,7 +267,6 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
     ]
     k_values = run_data.get_k_values()
 
-    # pruning_factors = [round(x, 2) for x in greedy_factors]
     xlabels = ["brute force"] + [
         "P:" + str(round(p, 2)) + "  K:" + str(round(k, 2))
         for (p, k) in zip(greedy_factors, k_values)
@@ -296,10 +297,10 @@ def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k)
     fig = plt.figure()
     border_width = 0.1
     ax_size = [
-        0 + border_width,
-        0 + 2 * border_width,
-        1 - 2 * border_width,
-        1 - 3 * border_width,
+        border_width,
+        2 * border_width,
+        1 - (2 * border_width),
+        1 - (3 * border_width),
     ]
     ax = fig.add_axes(ax_size)
 
@@ -330,6 +331,43 @@ def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
     for (tree, points) in signatures_used:
         NNS.extend(_nearest_neighbor_in_tree(neighbor_list, tree, points))
     return NNS
+
+
+# TODO add a theoretical max (when the genus/family is in the tree)
+def classification_accuracy(names, run_data, db_config_path):
+
+    found_genuses = [[g[0] for g in genuses] for genuses in run_data.classify("genus")]
+    found_families = [
+        [f[0] for f in families] for families in run_data.classify("family")
+    ]
+
+    meta_data = get_metadata_for(names.tolist(), db_config_path)
+    signatures_used = run_data.get_signatures_used()
+    searched_points = [i for batch in signatures_used for i in batch[1]]
+    true_genuses = [meta_data[names[point]]["genus"] for point in searched_points]
+    true_families = [meta_data[names[point]]["family"] for point in searched_points]
+
+    genus_matches = [
+        sum(_number_of_equal_elements(current_genuses, true_genuses))
+        for current_genuses in found_genuses
+    ]
+    family_matches = [
+        sum(_number_of_equal_elements(current_families, true_families))
+        for current_families in found_families
+    ]
+    values = genus_matches + family_matches
+    ranks = ["genus"] * len(genus_matches) + ["family"] * len(family_matches)
+
+    run_settings = run_data.get_keys() * 2
+    print(run_settings)
+    d = {"values": values, "ranks": ranks, "x": run_settings}
+    df = pd.DataFrame(d)
+    ax = sns.barplot(data=df, x="x", y="values", hue="ranks")
+    ax.set_xlabel(
+        "Settings for the run. P = greedy pruning factor, K = number of neighbors"
+    )
+    ax.set_ylabel("number of correctly classified queries")
+    ax.set_title("Classification accuracy")
 
 
 def _nearest_neighbor_in_tree(neighbor_array, tree, points):
@@ -394,6 +432,12 @@ parser.add_argument(
     "--distance_file", help="file for pairwise distance and names for current dataset"
 )
 
+parser.add_argument(
+    "--classification_accuracy",
+    action="store_true",
+    help="plot the classification accuracy",
+)
+
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
 
@@ -441,10 +485,13 @@ if (
     or args.dist_to_match
     or args.exact_matches
     or args.fn_dist_to_match
+    or args.classification_accuracy
 ):
 
     with open(args.distance_file, "rb") as f:
         (neighbors, names) = pickle.load(f)
+    if args.classification_accuracy:
+        classification_accuracy(names, run_data, db_config_path)
 
     if args.fn_dist_to_match:
         plot_FN_dist_to_match(args, neighbors, names, run_data)

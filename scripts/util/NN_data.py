@@ -1,19 +1,22 @@
+from collections import Counter
+
+
 class NNData:
     """ Stores data from multiple NN runs
     for example from running the greedy test in gsTest.py
 
     """
 
-    def __init__(self, all_runs, all_signatures_used, factors):
+    def __init__(self, all_runs, all_signatures_used, factors, meta_data=None):
         self.greedy_factors = [f[0] for f in factors]
         self.k_values = [f[1] for f in factors]
         self.gc_prune = [f[2] for f in factors]
         self.signatures_used = all_signatures_used
         run_data = [SingleRunData(all_runs[key]) for key in all_runs]
         self.run_data = run_data
+        self.meta_data = meta_data
 
     def get_distances_by_factor(self, un_pack=True):
-
         return [run.get_distances(un_pack) for run in self.run_data]
 
     def get_ids_by_factor(self, un_pack=True):
@@ -28,11 +31,31 @@ class NNData:
     def get_greedy_factors(self):
         return self.greedy_factors
 
+    def classify(self, rank):
+        all_names = [run.get_names(False) for run in self.run_data]
+        if self.meta_data is None:
+            return NNS
+
+        return [
+            [self._classify_one(knn, self.meta_data, rank) for knn in NNS]
+            for NNS in all_names
+        ]
+
+    def _classify_one(self, knn, meta_data, rank):
+        taxonomic_data = [meta_data[nn][rank] for nn in knn]
+        return Counter(taxonomic_data).most_common(1)[0]
+
     def get_k_values(self):
         return self.k_values
 
     def get_gc_prune_valunes(self):
         return self.gc_prune
+
+    def get_keys(self):
+        return [
+            "P: " + str(p) + " K: " + str(k)
+            for p, k in zip(self.greedy_factors, self.k_values)
+        ]
 
 
 class SingleRunData:
@@ -53,6 +76,12 @@ class SingleRunData:
         if unpack:
             ids = [i for NNS in ids for i in NNS]
         return ids
+
+    def get_names(self, unpack):
+        names = [NNS.get_names() for queries in self.run_data for NNS in queries]
+        if unpack:
+            names = [name for NNS in names for name in NNS]
+        return names
 
     def get_ops(self, repeat_k):
         if repeat_k:
