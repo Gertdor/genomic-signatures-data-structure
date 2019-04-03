@@ -5,6 +5,7 @@ import numpy as np
 
 import heapq
 import pickle
+from multiprocessing import Pool
 
 
 class VPTreeNode:
@@ -64,7 +65,10 @@ class NearestNeighbors:
         return self._node_list
 
     def get_ids(self):
-        return [nn[1].identifier for nn in self._node_list]
+        return [nn[1].get_identifier() for nn in self._node_list]
+
+    def get_names(self):
+        return [nn[1].get_name() for nn in self._node_list]
 
     def get_distances(self):
         return [nn[0] for nn in self._node_list]
@@ -77,6 +81,20 @@ class NearestNeighbors:
             self._node_list[-1] = item
             self._node_list.sort(key=itemgetter(0))
             self._update_cutoff_dist()
+
+
+class NNRunner(object):
+    def __init__(self, tree, k, greedy_factor, gc_pruning):
+        self.tree = tree
+        self.k = k
+        self.greedy_factor = greedy_factor
+        self.gc_pruning = gc_pruning
+
+    def __call__(self, point):
+        return VPTree.nearestNeighbour(
+            self.tree, point, self.k, self.greedy_factor, self.gc_pruning
+        )
+
 
 class VPTree:
     def save(tree, fileName):
@@ -160,6 +178,13 @@ class VPTree:
             VPTree.toJson(tree.right, level + 1)
             print()
             print(indent, "}", end="", sep="")
+
+    def many_nearest_neighbor(tree, points, k=1, greedy_factor=1, gc_pruning=False):
+
+        with Pool(3) as p:
+            return p.map(
+                NNRunner(tree, k, greedy_factor, gc_pruning), points, chunksize=100
+            )
 
     def nearestNeighbour(tree, point, k=1, greedy_factor=1, gc_pruning=False):
         """ Find the k nearest neighbors of 'point' in the VP tree

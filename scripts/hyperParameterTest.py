@@ -2,6 +2,8 @@ import argparse
 import pickle
 from itertools import product
 import numpy as np
+from multiprocessing import Pool
+import time
 
 from dataStructures.VPTreeElement import VPTreeElement
 from clustering_genomic_signatures.util.parse_vlmcs import (
@@ -12,14 +14,13 @@ from clustering_genomic_signatures.util.parse_distance import (
     add_distance_arguments,
     parse_distance_method,
 )
-
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VLMCElement import VPTreeVLMC
 from util.NN_data import NNData
 from util.splitElements import split_elements
 
 
-def hyper_parameter_test(elements, args):
+def hyper_parameter_test(elements, meta_data, args):
     """ Perform a test on how the greedy factor effects different metrics
 
         Input
@@ -66,22 +67,24 @@ def hyper_parameter_test(elements, args):
         search_elem_names = [elem.identifier for elem in search_elems]
         all_signatures_used.append((tree_elem_names, search_elem_names))
         for factor in factors:
-            run_NNS = one_nn_search_run(tree, search_elems, factor)
+            run_NNS = one_nn_search_run(tree, search_elems, factor, args.parallel)
+            all_runs[factor].append(run_NNS)
 
-            run_stats = [nn for nn in run_NNS]
-            all_runs[factor].append(run_stats)
-
-    data = NNData(all_runs, all_signatures_used, factors)
+    data = NNData(all_runs, all_signatures_used, factors, meta_data)
     with open(args.o, "wb") as f:
         pickle.dump(data, f)
 
 
-def one_nn_search_run(tree, search_elems, factors):
-
-    run_NNS = [
-        VPTree.nearestNeighbour(tree, elem, factors[1], factors[0], factors[2])
-        for elem in search_elems
-    ]
+def one_nn_search_run(tree, search_elems, factors, parallel):
+    if parallel:
+        run_NNS = VPTree.many_nearest_neighbor(
+            tree, search_elems, factors[1], factors[0], factors[2]
+        )
+    else:
+        run_NNS = [
+            VPTree.nearestNeighbour(tree, elem, factors[1], factors[0], factors[2])
+            for elem in search_elems
+        ]
     return run_NNS
 
 
@@ -177,6 +180,9 @@ parser.add_argument(
     action="store_true",
     help="should the elements to be stored/quiered not be randomized",
 )
+parser.add_argument(
+    "--parallel", action="store_true", help="Should the nn be searched for in parallel?"
+)
 
 add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
@@ -194,4 +200,6 @@ elements = [
     VPTreeVLMC(vlmc, distance_function, i, fast_dist) for i, vlmc in enumerate(vlmcs)
 ]
 
-hyper_parameter_test(elements, args)
+start_time = time.time()
+hyper_parameter_test(elements, meta_data, args)
+print("time:", time.time() - start_time)
