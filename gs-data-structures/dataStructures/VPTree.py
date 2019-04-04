@@ -189,25 +189,25 @@ class VPTree:
     def nearestNeighbour(tree, point, k=1, greedy_factor=1, gc_pruning=False):
         """ Find the k nearest neighbors of 'point' in the VP tree
             
-            Keyword arguments:
-            tree -- a vantage point tree of class VPTreeNode
-            point -- object of same class as those in the tree
-            k -- the number of neighbors to return
-            greedy_factor -- input used to speed up computation by more aggressivly pruning the search space
-                             With input factor = 1 the nearest neighbor is found if .distance(other) is metric
-                             For other values a possible neighbor has to be atleast 'greedy_factor' times
-                             better to be considered.
-                             For example: with greedy factor 2, and a current neighbor distance 10 away
-                             only nodes 2 times closer, distance 5 or closer, are considered.
-            gc-pruning -- should gc distance be used as a lower bound when calculating
-                          distances. This requires the tree to be created with nodes
-                          having a .fast_distance(self,other)
-
-            Returns a tuple format with the following format:
-                ([(distance, neighbor)],distance to furthest neighbor, number of distance calculations) 
-            With types:
-                ([(float, T)],float,int) where T is the type of objects stored in the tree
-        """
+            input
+            -----
+                tree -- a vantage point tree of class VPTreeNode
+                point -- object of same class as those in the tree
+                k -- the number of neighbors to return
+                greedy_factor -- input used to speed up computation by more aggressivly pruning
+                                 the search space. With input factor = 1 the nearest neighbor
+                                 is found if .distance(other) is metric. For other values a
+                                 possible neighbor has to be atleast 'greedy_factor' times
+                                 better to be considered.
+                                 For example: with greedy factor 2, and a current neighbor distance 10 away
+                                 only nodes 2 times closer, distance 5 or closer, are considered.
+                gc-pruning -- should gc distance be used as a lower bound when calculating
+                              distances. This requires the tree to be created with nodes
+                              having a .fast_distance(self,other)
+            output
+            -----
+                returns a NearestNeighbor object
+            """
         dist = tree.distance(point)
         greedy_multiplier = 1 / (greedy_factor)
         best_nodes = NearestNeighbors(k, (dist, tree.vp))
