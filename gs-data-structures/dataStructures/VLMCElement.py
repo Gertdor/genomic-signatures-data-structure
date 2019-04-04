@@ -26,6 +26,9 @@ class VPTreeVLMC:
     def get_name(self):
         return self.value.name
 
+    def get_gc(self):
+        return self.value.tree[""]["G"] + self.value.tree[""]["C"]
+
     def __eq__(self, other):
         return self.identifier == other.identifier
 
