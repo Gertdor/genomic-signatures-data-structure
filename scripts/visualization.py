@@ -67,7 +67,6 @@ def box_plot_dist(run_data):
     ]
     ax = fig.add_axes(ax_size)
     ax.boxplot(distances)
-
     pruning_factors = [str(round(x, 2)) for x in greedy_factors]
     xlabels = ["P:" + p + "  K:" + str(k) for (p, k) in zip(pruning_factors, k_values)]
     ax.set_xticklabels(xlabels)
@@ -88,6 +87,7 @@ def box_plot_dist_calcs(run_data):
     ax_size = [0.1, 0 + 2 * border_width, 1 - 2 * border_width, 1 - 3 * border_width]
     ax = fig.add_axes(ax_size)
     ax.boxplot(distances)
+    print(stats.describe(distances[0]))
 
     pruning_factors = [str(round(x, 2)) for x in greedy_factors]
     xlabels = ["P:" + p + "  K:" + str(k) for (p, k) in zip(pruning_factors, k_values)]

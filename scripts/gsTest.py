@@ -29,7 +29,7 @@ from util.splitElements import split_elements
 
 
 def fullTree(elements, random_element, leaf_size):
-    tree = VPTree.createVPTree(elements, random_element, max_leaf_size=leaf_size)
+    tree = VPTree(elements, random_element, max_leaf_size=leaf_size)
     return tree
 
 
@@ -51,13 +51,11 @@ def NNSearch(elements, args, print_results=True):
 
     elementsChecked = len(search_elements)
 
-    tree = VPTree.createVPTree(
-        tree_elements, random=args.random_vp, max_leaf_size=args.leaf_size
-    )
+    tree = VPTree(tree_elements, random=args.random_vp, max_leaf_size=args.leaf_size)
 
     start_time = time.time()
     NNS = [
-        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor, args.gc_prune)
+        tree.nearest_neighbor(elem, args.k, args.greedy_factor, args.gc_prune)
         for elem in search_elements
     ]
     total_time = time.time() - start_time
@@ -81,9 +79,9 @@ def lowDimTree(vlmcs, vlmcElements, args):
     numElemInTree = 100  # round(len(elements)*args.cutoff)
     print(len(elements))
 
-    tree = VPTree.createVPTree(elements[0:numElemInTree])
+    tree = VPTree(elements[0:numElemInTree])
     NNS = [
-        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor)
+        tree.nearest_neighbor(elem, args.k, args.greedy_factor)
         for elem in elements[numElemInTree : numElemInTree + elementsToCheck]
     ]
     printNNS(NNS)
@@ -128,7 +126,7 @@ def generatePointTree(args):
         VPTreeElement(np.random.uniform(args.min_value, args.max_value, args.dim))
         for x in range(args.number_of_num_searches)
     ]
-    tree = VPTree.createVPTree(numberList, args.random_vp, args.leaf_size)
+    tree = VPTree(numberList, args.random_vp, args.leaf_size)
     return tree
 
 
@@ -138,14 +136,13 @@ def number_NN(tree, args):
         for x in range(args.number_of_num_searches)
     ]
     NNS = [
-        VPTree.nearestNeighbour(tree, elem, args.k, args.greedy_factor)
-        for elem in elements
+        tree.nearest_neighbour(elem, args.k, args.greedy_factor) for elem in elements
     ]
     printNNS(NNS)
 
 
 def calcOverlap(tree):
-    overlap = VPTree.overlap(tree)
+    overlap = tree.overlap()
     print(str(overlap))
 
 

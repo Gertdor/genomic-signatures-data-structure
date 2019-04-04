@@ -91,23 +91,26 @@ class NNRunner(object):
         self.gc_pruning = gc_pruning
 
     def __call__(self, point):
-        return VPTree.nearestNeighbour(
-            self.tree, point, self.k, self.greedy_factor, self.gc_pruning
+        return self.tree.nearest_neighbor(
+            point, self.k, self.greedy_factor, self.gc_pruning
         )
 
 
 class VPTree:
-    def save(tree, fileName):
+    def __init__(self, values, random=True, max_leaf_size=1):
+        self.tree = VPTree._createVPTree(values, random, max_leaf_size)
+
+    def save(self, fileName):
         """ save a vantage point tree with pickle """
         with open(fileName, "wb") as f:
-            pickle.dump(tree, f)
+            pickle.dump(self.tree, f)
 
     def load(fileName):
         """ load a pickled vantage point tree """
         with open(fileName, "rb") as f:
             return pickle.load(f)
 
-    def createVPTree(values, random=True, max_leaf_size=1):
+    def _createVPTree(values, random=True, max_leaf_size=1):
         """ create a vantage point tree from a list of values
 
         values -- has to have a distance function called with .distance(other) which returns
@@ -155,38 +158,39 @@ class VPTree:
         threshold = currentNodeValue.distance(distances[median][1])
         leftValues = [x[1] for x in distances[:median]]
         rightValues = [x[1] for x in distances[median:]]
-        left = VPTree.createVPTree(leftValues, random, max_leaf_size)
-        right = VPTree.createVPTree(rightValues, random, max_leaf_size)
+        left = VPTree._createVPTree(leftValues, random, max_leaf_size)
+        right = VPTree._createVPTree(rightValues, random, max_leaf_size)
         # swap back to not change the original data
         if random:
             values[0], values[index] = values[index], values[0]
         return VPTreeNode(currentNodeValue, threshold, left, right)
 
-    def toJson(tree, level=0):
+    def toJson(self, level=0):
         """ Convert a vantage point tree to Json format """
-        if tree is None:
+        if self.tree is None:
             print("None", end="")
         else:
             indent = "  " * level
             print("{")
-            print(indent, "value:", tree.value.value, ",", sep="")
-            print(indent, "threshold:", tree.threshold, ",", sep="")
+            print(indent, "value:", self.tree.value.value, ",", sep="")
+            print(indent, "threshold:", self.tree.threshold, ",", sep="")
             print(indent, "left:", end="", sep="")
-            VPTree.toJson(tree.left, level + 1)
+            VPTree.toJson(self.tree.left, level + 1)
             print(",")
             print(indent, "right:", end="", sep="")
-            VPTree.toJson(tree.right, level + 1)
+            VPTree.toJson(self.tree.right, level + 1)
             print()
             print(indent, "}", end="", sep="")
 
-    def many_nearest_neighbor(tree, points, k=1, greedy_factor=1, gc_pruning=False):
+    # TODO fairly poor solution, a lot of overhead.
+    def many_nearest_neighbor(self, points, k=1, greedy_factor=1, gc_pruning=False):
 
         with Pool(3) as p:
             return p.map(
-                NNRunner(tree, k, greedy_factor, gc_pruning), points, chunksize=100
+                NNRunner(self, k, greedy_factor, gc_pruning), points, chunksize=100
             )
 
-    def nearestNeighbour(tree, point, k=1, greedy_factor=1, gc_pruning=False):
+    def nearest_neighbor(self, point, k=1, greedy_factor=1, gc_pruning=False):
         """ Find the k nearest neighbors of 'point' in the VP tree
             
             input
@@ -208,13 +212,13 @@ class VPTree:
             -----
                 returns a NearestNeighbor object
             """
-        dist = tree.distance(point)
+        dist = self.tree.distance(point)
         greedy_multiplier = 1 / (greedy_factor)
-        best_nodes = NearestNeighbors(k, (dist, tree.vp))
-        VPTree.NNS(tree, point, best_nodes, greedy_multiplier, gc_pruning)
+        best_nodes = NearestNeighbors(k, (dist, self.tree.vp))
+        VPTree._NNS(self.tree, point, best_nodes, greedy_multiplier, gc_pruning)
         return best_nodes
 
-    def NNS(currentNode, point, best_nodes, greedy_multiplier, gc_pruning):
+    def _NNS(currentNode, point, best_nodes, greedy_multiplier, gc_pruning):
         if currentNode is None:
             return
         if gc_pruning:
@@ -256,25 +260,25 @@ class VPTree:
         currentNode, point, distance, best_nodes, greedy_multiplier, gc_pruning
     ):
         if distance > currentNode.threshold:
-            VPTree.NNS(
+            VPTree._NNS(
                 currentNode.right, point, best_nodes, greedy_multiplier, gc_pruning
             )
             if (
                 distance - greedy_multiplier * best_nodes.get_cutoff_dist()
                 < currentNode.threshold
             ):
-                VPTree.NNS(
+                VPTree._NNS(
                     currentNode.left, point, best_nodes, greedy_multiplier, gc_pruning
                 )
         else:
-            VPTree.NNS(
+            VPTree._NNS(
                 currentNode.left, point, best_nodes, greedy_multiplier, gc_pruning
             )
             if (
                 distance + greedy_multiplier * best_nodes.get_cutoff_dist()
                 > currentNode.threshold
             ):
-                VPTree.NNS(
+                VPTree._NNS(
                     currentNode.right, point, best_nodes, greedy_multiplier, gc_pruning
                 )
 
@@ -283,7 +287,7 @@ class VPTree:
     ):
 
         if distance * 1 > currentNode.threshold:
-            VPTree.NNS(
+            VPTree._NNS(
                 currentNode.right, point, best_nodes, greedy_multiplier, gc_pruning
             )
             if (
@@ -298,7 +302,7 @@ class VPTree:
                 ):
                     return
 
-                VPTree.NNS(
+                VPTree._NNS(
                     currentNode.left, point, best_nodes, greedy_multiplier, gc_pruning
                 )
         else:
@@ -317,9 +321,9 @@ class VPTree:
                 if current_pair[0] < best_nodes.cutoff_dist:
                     best_nodes.insert(current_pair)
 
-    def overlap(tree):
+    def overlap(self):
         node_list = []
-        VPTree.create_list(tree, node_list)
+        self.create_list(node_list)
         overlap = 0
         for i in range(len(node_list)):
             current = node_list[i]
@@ -329,8 +333,8 @@ class VPTree:
     def _overlap(current, other):
         return int(current.distance(other.vp) > (current.threshold + other.threshold))
 
-    def create_list(tree, node_list):
-        if tree is not None:
-            node_list.append(tree)
-            VPTree.create_list(tree.left, node_list)
-            VPTree.create_list(tree.right, node_list)
+    def create_list(self, node_list):
+        if self.tree is not None:
+            node_list.append(self.tree)
+            self.create_list(self.tree.left, node_list)
+            self.create_list(self.tree.right, node_list)

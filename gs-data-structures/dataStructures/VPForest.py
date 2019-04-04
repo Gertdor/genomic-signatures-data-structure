@@ -4,7 +4,8 @@ import numpy as np
 
 
 class VPForest:
-    def __init__(values, random=True, max_leaf_size=1):
+    def __init__(self, values, random, max_leaf_size=1):
+        print(random)
         self.forest = VPForest._create_VP_forest(values, random, max_leaf_size)
 
     def _create_VP_forest(values, random, max_leaf_size):
@@ -30,14 +31,14 @@ class VPForest:
             for value in values
             if value[0] > low_gc - span and value[0] < high_gc + span
         ]
-        return VPTree.createVPTree(values_to_use, random, max_leaf_size)
+        return VPTree(values_to_use, random, max_leaf_size)
 
     def nearest_neighbor(self, point, k=1, greedy_factor=1, gc_pruning=False):
         # TODO Can do some smarter implementation of the keys here, if it is slow
 
         gc_content = point.get_gc()
-        for key in forest:
+        for key in self.forest:
             if gc_content > key[0] and gc_content < key[1]:
-                return VPTree.nearestNeighbour(
-                    forest[key], point, k, greedy_factor, gc_pruning
+                return self.forest[key].nearest_neighbor(
+                    point, k, greedy_factor, gc_pruning
                 )

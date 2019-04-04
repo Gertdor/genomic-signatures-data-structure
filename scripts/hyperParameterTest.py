@@ -5,6 +5,7 @@ import numpy as np
 from multiprocessing import Pool
 import time
 
+from dataStructures.VPForest import VPForest
 from dataStructures.VPTreeElement import VPTreeElement
 from clustering_genomic_signatures.util.parse_vlmcs import (
     parse_vlmcs,
@@ -32,30 +33,25 @@ def hyper_parameter_test(elements, meta_data, args):
         
         output
         ------
-        writes the following tuple to the file output_file
-        (all_runs, greedy_factors, all_signatures_used)
-        they have the following properties
-        all_runs -- a list for each greedy factor. That list contains a list of all runs,
-                    each run is a list oftuples of length args.num_elem_in_tree or (1-cutoff)*len(elements)
-                    whichever is smaller.
-                    The tuple has the form: (neighbour ID, distance to neighbor, nbr distance calculations)
-        greedy_factors -- a list of all greedy factors used
-        all_signatures_used -- a list containing a tuple of form ([elements in tree],[searched points])
+        writes an NNData object to the file location of args.o
     """
+
     greedy_factors = np.linspace(
         args.greedy_start, args.greedy_end, args.greedy_num_samples
     )
+    print("greedy:", greedy_factors)
+    k_values = np.arange(args.k_start - 1, args.k_end, args.k_step) + 1
     if args.gc_prune_test:
         gc_prune = [True, False]
     else:
         gc_prune = [True]
-    if args.k_test:
-        k_values = np.arange(args.k_start, args.k_end, args.k_step)
+    if args.forest:
+        forest = [True, False]
     else:
-        k_values = [args.k]
+        forest = [False]
 
     all_runs = {}
-    factors = [p for p in product(greedy_factors, k_values, gc_prune)]
+    factors = [p for p in product(forest, greedy_factors, k_values, gc_prune)]
     for factor in factors:
         all_runs[factor] = []
     all_signatures_used = []
@@ -63,14 +59,19 @@ def hyper_parameter_test(elements, meta_data, args):
     for run_nbr in range(args.number_of_runs):
         print("current run number:", run_nbr)
         (tree_elems, search_elems) = split_elements(elements, args)
-        tree = VPTree.createVPTree(
-            tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size
-        )
+        if args.forest:
+            forest = VPForest(
+                tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size
+            )
+        tree = VPTree(tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size)
         tree_elem_names = [elem.identifier for elem in tree_elems]
         search_elem_names = [elem.identifier for elem in search_elems]
         all_signatures_used.append((tree_elem_names, search_elem_names))
         for factor in factors:
-            run_NNS = one_nn_search_run(tree, search_elems, factor, args.parallel)
+            if factor[0]:
+                run_NNS = one_nn_search_run(forest, search_elems, factor, args.parallel)
+            else:
+                run_NNS = one_nn_search_run(tree, search_elems, factor, args.parallel)
             all_runs[factor].append(run_NNS)
 
     data = NNData(all_runs, all_signatures_used, factors, meta_data)
@@ -80,20 +81,24 @@ def hyper_parameter_test(elements, meta_data, args):
 
 def one_nn_search_run(tree, search_elems, factors, parallel):
     if parallel:
-        run_NNS = VPTree.many_nearest_neighbor(
-            tree, search_elems, factors[1], factors[0], factors[2]
+        print("whathaht")
+        run_NNS = tree.many_nearest_neighbor(
+            search_elems, factors[2], factors[1], factors[3]
         )
     else:
         run_NNS = [
-            VPTree.nearestNeighbour(tree, elem, factors[1], factors[0], factors[2])
+            tree.nearest_neighbor(elem, factors[2], factors[1], factors[3])
             for elem in search_elems
         ]
     return run_NNS
 
 
 parser = argparse.ArgumentParser(description="test args")
+
 parser.add_argument(
-    "-o", default="greedy_test.pickle", help="output file name of greedy test results"
+    "-o",
+    default="hyper_parameter_test.pickle",
+    help="output file name of greedy test results",
 )
 parser.add_argument(
     "--gc_prune_test",
@@ -101,29 +106,10 @@ parser.add_argument(
     help="should gc distance be used to prune the search results",
 )
 
-parser.add_argument(
-    "--k_test",
-    action="store_true",
-    help="should the effect of different k values be tested?",
-)
-parser.add_argument(
-    "--k_start", type=int, default=1, help="initial value of k if running k_test"
-)
-parser.add_argument(
-    "--k_end", default=4, type=int, help="maximum value of k if running k_test"
-)
-parser.add_argument(
-    "--k_step", default=1, type=int, help="step size of k if running k_test"
-)
+parser.add_argument("--k_start", type=int, default=1, help="initial value of k")
+parser.add_argument("--k_end", default=1, type=int, help="maximum value of k")
+parser.add_argument("--k_step", default=1, type=int, help="step size of k")
 
-parser.add_argument(
-    "--greedy_test",
-    action="store_true",
-    help=(
-        "This will run multiple runs with different greedy factors"
-        "determined by --greedy_start, --greedy_end, --greedy_step"
-    ),
-)
 parser.add_argument(
     "--greedy_start",
     type=float,
@@ -133,13 +119,13 @@ parser.add_argument(
 parser.add_argument(
     "--greedy_end",
     type=float,
-    default=5,
+    default=1,
     help="end value of greedy_factor when running greedy_test",
 )
 parser.add_argument(
     "--greedy_num_samples",
     type=int,
-    default=21,
+    default=1,
     help="number of samples to take between greedy_start and greedy_end when running greedy_test",
 )
 
@@ -185,6 +171,10 @@ parser.add_argument(
 )
 parser.add_argument(
     "--parallel", action="store_true", help="Should the nn be searched for in parallel?"
+)
+
+parser.add_argument(
+    "--forest", action="store_true", help="Should a VPForest be used instead of VPTree"
 )
 
 add_parse_vlmc_args(parser)
