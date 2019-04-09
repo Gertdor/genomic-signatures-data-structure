@@ -54,50 +54,49 @@ def plot_norm_to_gc(run_data):
 
 def box_plot_dist(run_data):
     distances = run_data.get_distances_by_factor()
-    greedy_factors = run_data.get_greedy_factors()
-    k_values = run_data.get_k_values()
+    x_tick_labels = run_data.get_keys()
+
+    xlabel = "pruning factor (P) and number of neighbors (K)"
+    ylabel = "distance to nearest neighbour"
+    title = "Pruning effect on distance to nearest neighbour"
+    _GS_box_plot(distances, x_tick_labels, xlabel, ylabel, title)
+
+
+def box_plot_dist_calcs(run_data):
+
+    distance_calcs = run_data.get_ops_by_factor()
+    x_tick_labels = run_data.get_keys()
+
+    xlabel = "pruning factor (P) and number of neighbors (K)"
+    ylabel = "number of distance calculations"
+    title = "Pruning effect on the number of distance calculations made"
+    _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
+
+
+def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False):
 
     fig = plt.figure()
     border_width = 0.1
     ax_size = [
         border_width,
         2 * border_width,
-        1 - (2 * border_width),
-        1 - (3 * border_width),
+        1 - 2 * border_width,
+        1 - 3 * border_width,
     ]
     ax = fig.add_axes(ax_size)
-    ax.boxplot(distances)
-    pruning_factors = [str(round(x, 2)) for x in greedy_factors]
-    xlabels = ["P:" + p + "  K:" + str(k) for (p, k) in zip(pruning_factors, k_values)]
-    ax.set_xticklabels(xlabels)
+    ax.boxplot(data)
+    print(stats.describe(data[0]))
+
+    xlabels = run_data.get_keys()
+    ax.set_xticklabels(x_tick_labels)
     plt.xticks(rotation=65)
-    plt.xlabel("pruning factor (P) and number of neighbors (K)")
-    plt.ylabel("distance to nearest neighbour")
-    plt.title("Pruning effect on distance to nearest neighbour")
 
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    if log:
+        ax.set_yscale("log")
 
-def box_plot_dist_calcs(run_data):
-
-    distances = run_data.get_ops_by_factor()
-    greedy_factors = run_data.get_greedy_factors()
-    k_values = run_data.get_k_values()
-
-    fig = plt.figure()
-    border_width = 0.1
-    ax_size = [0.1, 0 + 2 * border_width, 1 - 2 * border_width, 1 - 3 * border_width]
-    ax = fig.add_axes(ax_size)
-    ax.boxplot(distances)
-    print(stats.describe(distances[0]))
-
-    pruning_factors = [str(round(x, 2)) for x in greedy_factors]
-    xlabels = ["P:" + p + "  K:" + str(k) for (p, k) in zip(pruning_factors, k_values)]
-    ax.set_xticklabels(xlabels)
-    plt.xticks(rotation=65)
-    plt.xlabel("pruning factor (P) and number of neighbors (K)")
-    plt.ylabel("number of distance calculations")
-    ax.set_yscale("log")
-
-    plt.title("Pruning effect on the number of distance calculations made")
+    plt.title(title)
 
 
 def _get_found_points(neighbors, run_data, include_ground_truth=True, un_pack=True):
@@ -255,7 +254,8 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         for run in found_families
     ]
 
-    max_k = max(k_values)
+    max_k = int(max(k_values))
+    print(max_k)
     genus_data_to_plot = [Counter(genus_match) for genus_match in genus_matches]
     genus_data_to_plot = [
         [counter[key] for key in range(max_k + 1)] for counter in genus_data_to_plot
@@ -265,7 +265,6 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
     family_data_to_plot = [
         [counter[key] for key in range(max_k + 1)] for counter in family_data_to_plot
     ]
-    k_values = run_data.get_k_values()
 
     xlabels = ["brute force"] + [
         "P:" + str(round(p, 2)) + "  K:" + str(round(k, 2))
@@ -279,7 +278,7 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         x_descript="hyper-parameters, P=pruning factor, K = number of neighbors",
         y_descript="frequency at which exactly [color] of the nearest neighbors were of the same family",
         x_tick_labels=xlabels,
-        max_k=max(k_values),
+        max_k=max_k,
     )
 
     _bio_acc_bar_plot(
@@ -288,7 +287,7 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         x_descript="hyper-parameters, P=pruning factor, K = number of neighbors",
         y_descript="frequency at which exactly [color] of the nearest neighbors were of the same genus",
         x_tick_labels=xlabels,
-        max_k=max(k_values),
+        max_k=max_k,
     )
 
 
