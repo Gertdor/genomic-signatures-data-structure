@@ -1,37 +1,53 @@
 import os
 import re
+import sys
+import gzip
 
-
-def explore_tree(root_path, stopping_name, output_file):
+def find_latest_assembly(root_path, output_dir):
     if not os.path.isdir(root_path):
-        if re.search(stopping_name[0], root_path.path):
-            is_large_enough(root_path, output_file)
         return
     for path in os.scandir(root_path):
-        if re.search(stopping_name[0], path.name):
-            if len(stopping_name) == 1:
-                is_large_enough(path.path, output_file)
-            explore_tree(path, stopping_name[1:], output_file)
+        if "latest_assembly_versions" == path.name:
+            find_report(path,output_dir)
         if path.is_dir():
-            explore_tree(path, stopping_name, output_file)
+            if "all_assembly_versions" == path.name:
+                continue
+            find_latest_assembly(path, output_dir)
 
+def find_report(root_path, output_dir):
+    if not os.path.isdir(root_path):
+        return False
+    for path in os.scandir(root_path):
+        if re.search("report\.txt",path.name):
+            if is_large_enough(path.path):
+                unpack_and_save(root_path, output_dir)
+                return True
+        if path.is_dir():
+            if find_report(path, output_dir):
+                return True
+    return False
 
-def is_large_enough(report_location, output_file):
-    with open(report_location, "r") as f:
+def is_large_enough(report_location):
+    with open(report_location,"r") as f:
         for line in f:
-            if re.search(
-                "Assembly level: Chromosome|Assembly level: Complete Genome", line
-            ):
-                with open(output_file, "w") as f:
-                    f.write(report_location)
-                return
-        return
+            if re.search("Assembly level: Chromosome|Assembly level: Complete Genome",line):
+                return True
+        return False
+
+def unpack_and_save(root_path,output_dir):
+    for path in os.scandir(root_path):
+        if re.search("fna\.gz",path.name):
+            if not re.search("_cds_", path.name):
+                virus_name = path.path.split('/')[-2]
+                with gzip.open(path.path,'rb') as gz_f:
+                    with open(output_dir+"/"+virus_name+".fna",'wb') as f:
+                        content = gz_f.read()
+                        f.write(content)
 
 
-def list_all_relevant_paths(root_path, output_file):
-    explore_tree(root_path, ["latest_assembly_versions", "report\.txt"], output_file)
+def list_all_relevant_paths(root_path, output_dir):
+    find_latest_assembly(root_path,output_dir)
 
 
-list_all_relevant_paths(
-    "/home/basse/Documents/skola/masterThesis", "data/folder_locations.txt"
-)
+
+list_all_relevant_paths(sys.argv[1], sys.argv[2])
