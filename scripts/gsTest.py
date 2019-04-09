@@ -12,9 +12,9 @@ sys.path.append(
 )
 
 from dataStructures.VPTreeElement import VPTreeElement
-from clustering_genomic_signatures.util.parse_vlmcs import (
-    parse_vlmcs,
-    add_parse_vlmc_args,
+from clustering_genomic_signatures.util.parse_signatures import (
+    parse_signatures,
+    add_parse_signature_args,
 )
 from clustering_genomic_signatures.util.parse_distance import (
     add_distance_arguments,
@@ -262,11 +262,11 @@ parser.add_argument(
 )
 
 
-add_parse_vlmc_args(parser)
+add_parse_signature_args(parser)
 add_distance_arguments(parser)
 args = parser.parse_args()
 
-vlmcs = parse_vlmcs(args, "db_config.json")
+vlmcs = parse_signatures(args, "db_config.json")
 print("number of vlmcs:", len(vlmcs))
 distance_function = parse_distance_method(args)
 tmp = args.distance_function

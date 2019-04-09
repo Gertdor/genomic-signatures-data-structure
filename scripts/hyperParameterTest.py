@@ -7,9 +7,9 @@ import time
 
 from dataStructures.VPForest import VPForest
 from dataStructures.VPTreeElement import VPTreeElement
-from clustering_genomic_signatures.util.parse_vlmcs import (
-    parse_vlmcs,
-    add_parse_vlmc_args,
+from clustering_genomic_signatures.util.parse_signatures import (
+    parse_signatures,
+    add_parse_signature_args,
 )
 from clustering_genomic_signatures.util.parse_distance import (
     add_distance_arguments,
@@ -41,6 +41,7 @@ def hyper_parameter_test(elements, meta_data, args):
     )
     print("greedy:", greedy_factors)
     k_values = np.arange(args.k_start - 1, args.k_end, args.k_step) + 1
+    k_values = [int(k) for k in k_values]
     if args.gc_prune_test:
         gc_prune = [True, False]
     else:
@@ -177,12 +178,12 @@ parser.add_argument(
     "--forest", action="store_true", help="Should a VPForest be used instead of VPTree"
 )
 
-add_parse_vlmc_args(parser)
+add_parse_signature_args(parser)
 add_distance_arguments(parser)
 args = parser.parse_args()
 db_config_path = "db_config.json"
 
-vlmcs = parse_vlmcs(args, db_config_path)
+vlmcs = parse_signatures(args, db_config_path)
 names = [vlmc.name for vlmc in vlmcs]
 meta_data = get_metadata_for(names, db_config_path)
 print("number of vlmcs:", len(vlmcs))

@@ -11,7 +11,7 @@ from scipy import stats
 from clustering_genomic_signatures.dbtools.get_signature_metadata import (
     get_metadata_for,
 )
-from clustering_genomic_signatures.util.parse_vlmcs import add_parse_vlmc_args
+
 from clustering_genomic_signatures.util.parse_distance import add_distance_arguments
 
 from util.distance_util import distance_between_ids
@@ -438,7 +438,6 @@ parser.add_argument(
     help="plot the classification accuracy",
 )
 
-add_parse_vlmc_args(parser)
 add_distance_arguments(parser)
 
 args = parser.parse_args()
