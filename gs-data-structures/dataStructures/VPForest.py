@@ -42,3 +42,9 @@ class VPForest:
                 return self.forest[key].nearest_neighbor(
                     point, k, greedy_factor, gc_pruning
                 )
+
+    def many_nearest_neighbor(self, points, k=1, greedy_factor=1, gc_pruning=False):
+        return [
+            self.nearest_neighbor(point, k, greedy_factor, gc_pruning)
+            for point in points
+        ]

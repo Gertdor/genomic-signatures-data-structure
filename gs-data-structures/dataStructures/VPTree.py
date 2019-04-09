@@ -65,7 +65,7 @@ class NearestNeighbors:
         return self._node_list
 
     def get_ids(self):
-        return [nn[1].get_identifier() for nn in self._node_list]
+        return [nn[1].get_id() for nn in self._node_list]
 
     def get_names(self):
         return [nn[1].get_name() for nn in self._node_list]
