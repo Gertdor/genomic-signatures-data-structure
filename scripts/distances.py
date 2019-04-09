@@ -74,7 +74,10 @@ def norm_to_gc_dist(vlmcs, neighbor_order, number_of_neighbors, filename=None):
 
 def gc_dist_distribution(vlmcs):
     gc = [vlmc.tree[""]["G"] + vlmc.tree[""]["C"] for vlmc in vlmcs]
-    ax = sns.distplot(gc)
+    ax = sns.distplot(gc, norm_hist = True)
+    plt.xlabel("gc content")
+    plt.ylabel("density")
+    plt.title("distribution of gc content in the database")
     plt.show()
 
 
