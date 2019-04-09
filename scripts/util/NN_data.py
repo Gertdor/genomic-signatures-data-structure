@@ -8,9 +8,10 @@ class NNData:
     """
 
     def __init__(self, all_runs, all_signatures_used, factors, meta_data=None):
-        self.greedy_factors = [f[0] for f in factors]
-        self.k_values = [f[1] for f in factors]
-        self.gc_prune = [f[2] for f in factors]
+        self.forest_usage = [f[0] for f in factors]
+        self.greedy_factors = [f[1] for f in factors]
+        self.k_values = [f[2] for f in factors]
+        self.gc_prune = [f[3] for f in factors]
         self.signatures_used = all_signatures_used
         run_data = [SingleRunData(all_runs[key]) for key in all_runs]
         self.run_data = run_data
@@ -52,9 +53,12 @@ class NNData:
         return self.gc_prune
 
     def get_keys(self):
+
         return [
-            "P: " + str(p) + " K: " + str(k)
-            for p, k in zip(self.greedy_factors, self.k_values)
+            "Forest" * f + " P: " + str(p) + " K: " + str(k) + " gc" * gc
+            for f, p, k, gc in zip(
+                self.forest_usage, self.greedy_factors, self.k_values, self.gc_prune
+            )
         ]
 
 
