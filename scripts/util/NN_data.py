@@ -1,57 +1,29 @@
+from collections import Counter
+
+
 class NNData:
     """ Stores data from multiple NN runs
     for example from running the greedy test in gsTest.py
 
     """
 
-    # saker att lagra
-    # k
-    # trees, searched points
-    # all runs, [] - each greedy factor
-    # for each greedy factor, [obs]
-
-    def __init__(self, all_runs, greedy_factors, all_signatures_used):
-        self.greedy_factors = greedy_factors
+    def __init__(self, all_runs, all_signatures_used, factors, meta_data=None):
+        self.greedy_factors = [f[0] for f in factors]
+        self.k_values = [f[1] for f in factors]
+        self.gc_prune = [f[2] for f in factors]
         self.signatures_used = all_signatures_used
-        self.all_runs = all_runs
-        self.k = len(all_runs[0][0][0])
+        run_data = [SingleRunData(all_runs[key]) for key in all_runs]
+        self.run_data = run_data
+        self.meta_data = meta_data
 
-    def get_distances_by_factor(self):
+    def get_distances_by_factor(self, un_pack=True):
+        return [run.get_distances(un_pack) for run in self.run_data]
 
-        return [
-            [nn[0] for tree in run for NNS in run for knn in NNS for nn in knn[0]]
-            for run in self.all_runs
-        ]
-
-    def get_ids_by_factor(self):
-        return [
-            [
-                nn[1].identifier
-                for tree in run
-                for NNS in run
-                for knn in NNS
-                for nn in knn[0]
-            ]
-            for run in self.all_runs
-        ]
+    def get_ids_by_factor(self, un_pack=True):
+        return [run.get_ids(un_pack) for run in self.run_data]
 
     def get_ops_by_factor(self, repeat_k=False):
-        if repeat_k:
-            return [
-                [
-                    knn[1]
-                    for tree in run
-                    for NNS in run
-                    for knn in NNS
-                    for i in range(self.k)
-                ]
-                for run in self.all_runs
-            ]
-        else:
-            return [
-                [knn[1] for tree in run for NNS in run for knn in NNS]
-                for run in self.all_runs
-            ]
+        return [run.get_ops(repeat_k) for run in self.run_data]
 
     def get_signatures_used(self):
         return self.signatures_used
@@ -59,5 +31,66 @@ class NNData:
     def get_greedy_factors(self):
         return self.greedy_factors
 
-    def get_node_ids(self):
-        return 0
+    def classify(self, rank):
+        all_names = [run.get_names(False) for run in self.run_data]
+        if self.meta_data is None:
+            return NNS
+
+        return [
+            [self._classify_one(knn, self.meta_data, rank) for knn in NNS]
+            for NNS in all_names
+        ]
+
+    def _classify_one(self, knn, meta_data, rank):
+        taxonomic_data = [meta_data[nn][rank] for nn in knn]
+        return Counter(taxonomic_data).most_common(1)[0]
+
+    def get_k_values(self):
+        return self.k_values
+
+    def get_gc_prune_valunes(self):
+        return self.gc_prune
+
+    def get_keys(self):
+        return [
+            "P: " + str(p) + " K: " + str(k)
+            for p, k in zip(self.greedy_factors, self.k_values)
+        ]
+
+
+class SingleRunData:
+    def __init__(self, run_data):
+
+        self.run_data = run_data
+
+    def get_distances(self, unpack):
+        distances = [
+            NNS.get_distances() for queries in self.run_data for NNS in queries
+        ]
+        if unpack:
+            distances = [d for NNS in distances for d in NNS]
+        return distances
+
+    def get_ids(self, unpack):
+        ids = [NNS.get_ids() for queries in self.run_data for NNS in queries]
+        if unpack:
+            ids = [i for NNS in ids for i in NNS]
+        return ids
+
+    def get_names(self, unpack):
+        names = [NNS.get_names() for queries in self.run_data for NNS in queries]
+        if unpack:
+            names = [name for NNS in names for name in NNS]
+        return names
+
+    def get_ops(self, repeat_k):
+        if repeat_k:
+            ops = [
+                NNS.get_ops()
+                for queries in self.run_data
+                for NNS in queries
+                for k in range(NNS.get_size())
+            ]
+        else:
+            ops = [NNS.get_ops() for queries in self.run_data for NNS in queries]
+        return ops

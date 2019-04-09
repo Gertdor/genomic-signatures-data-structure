@@ -1,6 +1,8 @@
 import argparse
 import pickle
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from operator import itemgetter
 from scipy import stats
@@ -70,6 +72,12 @@ def norm_to_gc_dist(vlmcs, neighbor_order, number_of_neighbors, filename=None):
             pickle.dump(all_distances, f)
 
 
+def gc_dist_distribution(vlmcs):
+    gc = [vlmc.tree[""]["G"] + vlmc.tree[""]["C"] for vlmc in vlmcs]
+    ax = sns.distplot(gc)
+    plt.show()
+
+
 parser = argparse.ArgumentParser(description="distance parser")
 
 add_parse_vlmc_args(parser)
@@ -92,10 +100,17 @@ parser.add_argument(
 parser.add_argument(
     "--neighbor_order_file", help="file name where the neighbor order matrix is stored"
 )
+parser.add_argument(
+    "--gc_content", action="store_true", help="calculate gc content of all signatures"
+)
 
 args = parser.parse_args()
 
 vlmcs = parse_vlmcs(args, "db_config.json")
+
+if args.gc_content:
+    gc_dist_distribution(vlmcs)
+
 if args.norm_to_gc:
     (neighbor_order, _) = load_neighbor_order(args.neighbor_order_file)
     norm_to_gc_dist(vlmcs, neighbor_order, args.number_of_neighbors, args.o)
