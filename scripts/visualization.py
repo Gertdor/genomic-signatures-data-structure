@@ -16,6 +16,7 @@ from clustering_genomic_signatures.util.parse_distance import add_distance_argum
 
 from util.distance_util import distance_between_ids
 
+hyper_parameter_xlabel="hyper-parameters, P=pruning factor, K = number of neighbors, gc - gc pruning used"
 
 def plot_dist_calc_to_distance(run_data, variance=False):
 
@@ -56,7 +57,7 @@ def box_plot_dist(run_data):
     distances = run_data.get_distances_by_factor()
     x_tick_labels = run_data.get_keys()
 
-    xlabel = "pruning factor (P) and number of neighbors (K)"
+    xlabel = hyper_parameter_xlabel
     ylabel = "distance to nearest neighbour"
     title = "Pruning effect on distance to nearest neighbour"
     _GS_box_plot(distances, x_tick_labels, xlabel, ylabel, title)
@@ -67,7 +68,7 @@ def box_plot_dist_calcs(run_data):
     distance_calcs = run_data.get_ops_by_factor()
     x_tick_labels = run_data.get_keys()
 
-    xlabel = "pruning factor (P) and number of neighbors (K)"
+    xlabel = hyper_parameter_xlabel
     ylabel = "number of distance calculations"
     title = "Pruning effect on the number of distance calculations made"
     _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
@@ -225,14 +226,15 @@ def exact_matches(neighbors, names, run_data):
 def biological_accuracy(neighbors, names, run_data, db_config_path):
 
     signatures_used = run_data.get_signatures_used()
-    greedy_factors = run_data.get_greedy_factors()
-    k_values = run_data.get_k_values()
+    max_k = max(run_data.get_k_values())
     meta_data = get_metadata_for(names.tolist(), db_config_path)
     found_neighbors = _get_found_points(
         neighbors, run_data, include_ground_truth=True, un_pack=False
     )
 
     searched_points = [i for batch in signatures_used for i in batch[1]]
+    number_of_searched_points = len(searched_points)
+
     genuses = [meta_data[names[point]]["genus"] for point in searched_points]
     families = [meta_data[names[point]]["family"] for point in searched_points]
 
@@ -254,38 +256,36 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         for run in found_families
     ]
 
-    max_k = int(max(k_values))
-    print(max_k)
     genus_data_to_plot = [Counter(genus_match) for genus_match in genus_matches]
     genus_data_to_plot = [
-        [counter[key] for key in range(max_k + 1)] for counter in genus_data_to_plot
+        [counter[key] / number_of_searched_points for key in range(max_k + 1)]
+        for counter in genus_data_to_plot
     ]
 
     family_data_to_plot = [Counter(family_match) for family_match in family_matches]
     family_data_to_plot = [
-        [counter[key] for key in range(max_k + 1)] for counter in family_data_to_plot
+        [counter[key] / number_of_searched_points for key in range(max_k + 1)]
+        for counter in family_data_to_plot
     ]
 
-    xlabels = ["brute force"] + [
-        "P:" + str(round(p, 2)) + "  K:" + str(round(k, 2))
-        for (p, k) in zip(greedy_factors, k_values)
-    ]
+    xlabels = ["brute force"] + run_data.get_keys()
+
     # TODO seaborn nicer bars
 
     _bio_acc_bar_plot(
         data=family_data_to_plot,
-        title="The effect of pruning factor on classification accuracy of family",
-        x_descript="hyper-parameters, P=pruning factor, K = number of neighbors",
-        y_descript="frequency at which exactly [color] of the nearest neighbors were of the same family",
+        title="The effect of different hyper parameters on classification accuracy of family",
+        x_descript=hyper_parameter_xlabel,
+        y_descript="fraction of the nearest neighbors which were of the same family",
         x_tick_labels=xlabels,
         max_k=max_k,
     )
 
     _bio_acc_bar_plot(
         data=genus_data_to_plot,
-        title="The effect of pruning factor on classification accuracy of genus",
-        x_descript="hyper-parameters, P=pruning factor, K = number of neighbors",
-        y_descript="frequency at which exactly [color] of the nearest neighbors were of the same genus",
+        title="The effect of hyper parameters on classification accuracy of genus",
+        x_descript=hyper_parameter_xlabel,
+        y_descript="fraction nearest neighbors which were of the same genus",
         x_tick_labels=xlabels,
         max_k=max_k,
     )
@@ -362,9 +362,7 @@ def classification_accuracy(names, run_data, db_config_path):
     d = {"values": values, "ranks": ranks, "x": run_settings}
     df = pd.DataFrame(d)
     ax = sns.barplot(data=df, x="x", y="values", hue="ranks")
-    ax.set_xlabel(
-        "Settings for the run. P = greedy pruning factor, K = number of neighbors"
-    )
+    ax.set_xlabel(hyper_parameter_xlabel)    
     ax.set_ylabel("number of correctly classified queries")
     ax.set_title("Classification accuracy")
 
