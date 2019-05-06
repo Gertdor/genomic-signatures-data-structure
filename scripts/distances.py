@@ -3,15 +3,16 @@ import pickle
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from operator import itemgetter
 from scipy import stats
 from dataStructures.VLMCElement import VPTreeVLMC
 from operator import itemgetter
 
-from clustering_genomic_signatures.util.parse_vlmcs import (
-    parse_vlmcs,
-    add_parse_vlmc_args,
+from clustering_genomic_signatures.util.parse_signatures import (
+    parse_signatures,
+    add_parse_signature_args,
 )
 from clustering_genomic_signatures.util.parse_distance import (
     add_distance_arguments,
@@ -81,9 +82,28 @@ def gc_dist_distribution(vlmcs):
     plt.show()
 
 
+def branch_length_distribution(vlmcs):
+    length_list = [[len(key) for key in vlmc.tree.keys()] for vlmc in vlmcs]
+    max_depths = [max(lengths) for lengths in length_list]
+    numberOfParam = [len(lengths) for lengths in length_list]
+    ys = [
+        sum([length > max_depth / 2 for length in lengths])
+        for max_depth, lengths in zip(max_depths, length_list)
+    ]
+    plt.subplots()
+    plt.boxplot(numberOfParam)
+    plt.subplots()
+    d = {'max_depth':max_depths,'ys':ys}
+    df = pd.DataFrame(data=d)
+    sns.catplot(x='max_depth',y='ys',data=df)
+    plt.xlabel("max depth of VLMC")
+    plt.ylabel("number of branches with depth > maxdepth/2")
+    plt.title("distribution of branch depths compared to max depth")
+    plt.show()
+
 parser = argparse.ArgumentParser(description="distance parser")
 
-add_parse_vlmc_args(parser)
+add_parse_signature_args(parser)
 add_distance_arguments(parser)
 
 parser.add_argument(
@@ -109,7 +129,9 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-vlmcs = parse_vlmcs(args, "db_config.json")
+vlmcs = parse_signatures(args, "db_config.json")
+
+#branch_length_distribution(vlmcs)
 
 if args.gc_content:
     gc_dist_distribution(vlmcs)
@@ -117,7 +139,7 @@ if args.gc_content:
 if args.norm_to_gc:
     (neighbor_order, _) = load_neighbor_order(args.neighbor_order_file)
     norm_to_gc_dist(vlmcs, neighbor_order, args.number_of_neighbors, args.o)
-else:
-    distance_function = parse_distance_method(args)
-    neighbor_order = calculate_neighbor_order(vlmcs, distance_function)
-    save_neighbor_order(neighbor_order, args.o)
+#else:
+#    distance_function = parse_distance_method(args)
+#    neighbor_order = calculate_neighbor_order(vlmcs, distance_function)
+#    save_neighbor_order(neighbor_order, args.o)
