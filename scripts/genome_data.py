@@ -36,11 +36,11 @@ def is_large_enough(report_location):
 
 def unpack_and_save(root_path,output_dir):
     for path in os.scandir(root_path):
-        if re.search("fna\.gz",path.name):
-            if not re.search("_cds_", path.name):
-                virus_name = path.path.split('/')[-2]
+        if re.search("genomic\.fna\.gz",path.name):
+            if not re.search("_cds_|_rna_", path.name):
+                organism_name = path.path.split('/')[-2]
                 with gzip.open(path.path,'rb') as gz_f:
-                    with open(output_dir+"/"+virus_name+".fna",'wb') as f:
+                    with open(output_dir+"/"+organism_name + ".fna",'wb') as f:
                         content = gz_f.read()
                         f.write(content)
 
