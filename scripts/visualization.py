@@ -39,7 +39,7 @@ def plot_dist_calc_to_distance(run_data, variance=False):
     ax.scatter(distance, dist_calcs)
     plt.xlabel("average distance to nearest neighbor")
     plt.ylabel("average number of distance calculations")
-    plt.title("Pruning effect on number of distance calculations made")
+    plt.title("Hyper parameter effect on number of distance calculations made")
 
 
 def plot_norm_to_gc(run_data):
@@ -59,7 +59,7 @@ def box_plot_dist(run_data):
 
     xlabel = hyper_parameter_xlabel
     ylabel = "distance to nearest neighbour"
-    title = "Pruning effect on distance to nearest neighbour"
+    title = "Pruning effect on distance to furthest NN"
     _GS_box_plot(distances, x_tick_labels, xlabel, ylabel, title)
 
 
@@ -305,13 +305,16 @@ def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k)
 
     xlabel_locs = np.arange(0, len(x_tick_labels) * (max_k + 3), step=(max_k + 3))
     plt.xticks(xlabel_locs, x_tick_labels, rotation=65)
-    bar_width = 0.8
-
+    bar_width = 5
+    
     colors = plt.cm.Accent(np.linspace(0, 1, 8))
+
+    prev = 0 
     for i, genus in enumerate(data):
         for j, freq in enumerate(genus):
-            ax.bar(i * (max_k + 3) + j + 1, freq, color=colors[j])
-
+            ax.bar(i * (max_k + 3),freq, bottom = prev, color=colors[j], width=bar_width)
+            prev = prev + freq
+        prev = 0
     for i in range(max_k + 1):
         ax.bar(0, 0, color=colors[i], label=str(i))
 
