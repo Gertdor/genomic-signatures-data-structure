@@ -3,7 +3,11 @@ import pickle
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 import time
+=======
+import pandas as pd
+>>>>>>> 5af7e44ffbd1008ab7b7117364400231f3e752e7
 
 from operator import itemgetter
 from scipy import stats
@@ -82,6 +86,25 @@ def gc_dist_distribution(vlmcs):
     plt.show()
 
 
+def branch_length_distribution(vlmcs):
+    length_list = [[len(key) for key in vlmc.tree.keys()] for vlmc in vlmcs]
+    max_depths = [max(lengths) for lengths in length_list]
+    numberOfParam = [len(lengths) for lengths in length_list]
+    ys = [
+        sum([length > max_depth / 2 for length in lengths])
+        for max_depth, lengths in zip(max_depths, length_list)
+    ]
+    plt.subplots()
+    plt.boxplot(numberOfParam)
+    plt.subplots()
+    d = {'max_depth':max_depths,'ys':ys}
+    df = pd.DataFrame(data=d)
+    sns.catplot(x='max_depth',y='ys',data=df)
+    plt.xlabel("max depth of VLMC")
+    plt.ylabel("number of branches with depth > maxdepth/2")
+    plt.title("distribution of branch depths compared to max depth")
+    plt.show()
+
 parser = argparse.ArgumentParser(description="distance parser")
 
 add_parse_signature_args(parser)
@@ -114,6 +137,8 @@ args = parser.parse_args()
 vlmcs = parse_signatures(args, "db_config.json")
 
 print("length",len(vlmcs))
+
+#branch_length_distribution(vlmcs)
 
 if args.gc_content:
     gc_dist_distribution(vlmcs)

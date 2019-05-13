@@ -44,6 +44,7 @@ class NNData:
 
     def _classify_one(self, knn, meta_data, rank):
         taxonomic_data = [meta_data[nn][rank] for nn in knn]
+
         return Counter(taxonomic_data).most_common(1)[0]
 
     def get_k_values(self):

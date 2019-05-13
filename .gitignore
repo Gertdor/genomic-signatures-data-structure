@@ -3,6 +3,7 @@
 *.tmp
 *.pickle
 *.npy
+clustering-genomic-signatures-private
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
