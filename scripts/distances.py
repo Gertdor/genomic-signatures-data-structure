@@ -3,15 +3,16 @@ import pickle
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import time
 
 from operator import itemgetter
 from scipy import stats
 from dataStructures.VLMCElement import VPTreeVLMC
 from operator import itemgetter
 
-from clustering_genomic_signatures.util.parse_vlmcs import (
-    parse_vlmcs,
-    add_parse_vlmc_args,
+from clustering_genomic_signatures.util.parse_signatures import (
+    parse_signatures,
+    add_parse_signature_args,
 )
 from clustering_genomic_signatures.util.parse_distance import (
     add_distance_arguments,
@@ -31,9 +32,9 @@ def load_neighbor_order(filename):
 
 def calculate_neighbor_order(vlmcs, distance_function):
     names = np.array([vlmc.name for vlmc in vlmcs])
-    distances = distance_function.distances(vlmcs)
+    distances = np.array(distance_function.distances(vlmcs))
     neighbor_order = np.argsort(distances, 1)
-    return (np.array(neighbor_order), names)
+    return (neighbor_order, names, distances)
 
 
 def norm_to_gc_dist(vlmcs, neighbor_order, number_of_neighbors, filename=None):
@@ -83,7 +84,7 @@ def gc_dist_distribution(vlmcs):
 
 parser = argparse.ArgumentParser(description="distance parser")
 
-add_parse_vlmc_args(parser)
+add_parse_signature_args(parser)
 add_distance_arguments(parser)
 
 parser.add_argument(
@@ -101,15 +102,18 @@ parser.add_argument(
     help="how many neighbors should be considered when calculating norm_to_gc_distance",
 )
 parser.add_argument(
-    "--neighbor_order_file", help="file name where the neighbor order matrix is stored"
-)
-parser.add_argument(
     "--gc_content", action="store_true", help="calculate gc content of all signatures"
+)
+
+parser.add_argument(
+    "--neighbor_order",action="store_true",help="calculate distance and neighbor order"
 )
 
 args = parser.parse_args()
 
-vlmcs = parse_vlmcs(args, "db_config.json")
+vlmcs = parse_signatures(args, "db_config.json")
+
+print("length",len(vlmcs))
 
 if args.gc_content:
     gc_dist_distribution(vlmcs)
@@ -117,7 +121,11 @@ if args.gc_content:
 if args.norm_to_gc:
     (neighbor_order, _) = load_neighbor_order(args.neighbor_order_file)
     norm_to_gc_dist(vlmcs, neighbor_order, args.number_of_neighbors, args.o)
-else:
+if args.neighbor_order:
+    start = time.time()
     distance_function = parse_distance_method(args)
-    neighbor_order = calculate_neighbor_order(vlmcs, distance_function)
-    save_neighbor_order(neighbor_order, args.o)
+    (neighbor_order,names,distances) = calculate_neighbor_order(vlmcs, distance_function)
+    save_neighbor_order((neighbor_order,names), args.o)
+    with open("distances.pickle","wb") as f:
+        pickle.dump(distances,f)
+    print(time.time()-start)
