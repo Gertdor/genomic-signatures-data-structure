@@ -3,7 +3,6 @@ from sys import float_info
 from random import randint
 import numpy as np
 
-import heapq
 import pickle
 from multiprocessing import Pool
 
@@ -45,6 +44,7 @@ class VPTreeNode:
 class NearestNeighbors:
     def __init__(self, size, initial_element):
         self._size = size
+        print(size)
         self._ops = 0
         self._node_list = [initial_element for i in range(self._size)]
         self._update_cutoff_dist()
@@ -72,6 +72,21 @@ class NearestNeighbors:
 
     def get_distances(self):
         return [nn[0] for nn in self._node_list]
+    
+    def get_taxonomic_data(self, rank):
+        return [nn[1].get_taxonomic_data(rank) for nn in self._node_list]
+
+    def classify(self, rank, return_one=False):
+        
+        taxonomic_data = self.get_taxonomic_data(rank)
+        distances = self.get_distances()
+        counts={name:0 for name in taxonomic_data}
+        for name, dist in zip(taxonomic_data, distances):
+            counts[name] = counts[name]+(1/dist)
+
+        if(return_one):
+            return max(counts.items(),key=itemgetter(1))[0]
+        return counts
 
     def get_size(self):
         return self._size
@@ -100,10 +115,10 @@ class VPTree:
     def __init__(self, values, random=True, max_leaf_size=1):
         self.tree = VPTree._createVPTree(values, random, max_leaf_size)
 
-    def save(self, fileName):
+    def save(tree,fileName):
         """ save a vantage point tree with pickle """
         with open(fileName, "wb") as f:
-            pickle.dump(self.tree, f)
+            pickle.dump(tree, f)
 
     def load(fileName):
         """ load a pickled vantage point tree """
