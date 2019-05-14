@@ -7,24 +7,14 @@ import time
 
 from dataStructures.VPForest import VPForest
 from dataStructures.VPTreeElement import VPTreeElement
-from clustering_genomic_signatures.util.parse_signatures import (
-    parse_signatures,
-    add_parse_signature_args,
-)
-from clustering_genomic_signatures.util.parse_distance import (
-    add_distance_arguments,
-    parse_distance_method,
-)
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VLMCElement import VPTreeVLMC
+
 from util.NN_data import NNData
 from util.splitElements import split_elements
-from clustering_genomic_signatures.dbtools.get_signature_metadata import (
-    get_metadata_for,
-)
+from util.generateVLMCElements import generate_vlmc_elements,add_generate_vlmc_args
 
-
-def hyper_parameter_test(elements, meta_data, args):
+def hyper_parameter_test(elements, args):
     """ Perform a test on how the greedy factor effects different metrics
 
         Input
@@ -39,7 +29,6 @@ def hyper_parameter_test(elements, meta_data, args):
     greedy_factors = np.linspace(
         args.greedy_start, args.greedy_end, args.greedy_num_samples
     )
-    print("greedy:", greedy_factors)
     k_values = np.arange(args.k_start - 1, args.k_end, args.k_step) + 1
     k_values = [int(k) for k in k_values]
     if args.gc_prune_test:
@@ -56,7 +45,7 @@ def hyper_parameter_test(elements, meta_data, args):
     for factor in factors:
         all_runs[factor] = []
     all_signatures_used = []
-
+    
     for run_nbr in range(args.number_of_runs):
         print("current run number:", run_nbr)
         (tree_elems, search_elems) = split_elements(elements, args)
@@ -75,14 +64,13 @@ def hyper_parameter_test(elements, meta_data, args):
                 run_NNS = one_nn_search_run(tree, search_elems, factor, args.parallel)
             all_runs[factor].append(run_NNS)
 
-    data = NNData(all_runs, all_signatures_used, factors, meta_data)
+    data = NNData(all_runs, all_signatures_used, factors)
     with open(args.o, "wb") as f:
         pickle.dump(data, f)
 
 
 def one_nn_search_run(tree, search_elems, factors, parallel):
     if parallel:
-        print("whathaht")
         run_NNS = tree.many_nearest_neighbor(
             search_elems, factors[2], factors[1], factors[3]
         )
@@ -177,26 +165,11 @@ parser.add_argument(
 parser.add_argument(
     "--forest", action="store_true", help="Should a VPForest be used instead of VPTree"
 )
-
-add_parse_signature_args(parser)
-add_distance_arguments(parser)
+add_generate_vlmc_args(parser)
 args = parser.parse_args()
-db_config_path = "db_config.json"
 
-vlmcs = parse_signatures(args, db_config_path)
-names = [vlmc.name for vlmc in vlmcs]
-meta_data = get_metadata_for(names, db_config_path)
-print("number of vlmcs:", len(vlmcs))
-distance_function = parse_distance_method(args)
-tmp = args.distance_function
-args.distance_function = "gc-content"
-fast_dist = parse_distance_method(args)
-args.distance_function = tmp
-
-elements = [
-    VPTreeVLMC(vlmc, distance_function, i, fast_dist) for i, vlmc in enumerate(vlmcs)
-]
+elements = generate_vlmc_elements(args)
 
 start_time = time.time()
-hyper_parameter_test(elements, meta_data, args)
+hyper_parameter_test(elements, args)
 print("time:", time.time() - start_time)

@@ -4,21 +4,7 @@ import pickle
 from dataStructures.VPForest import VPForest
 from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VPTree import VPTree, VPTreeNode
-from dataStructures.VLMCElement import VPTreeVLMC
-from util.subsetMetadata import subset_all_metadata
-
-from clustering_genomic_signatures.util.parse_signatures import (
-    parse_signatures,
-    add_parse_signature_args,
-)
-from clustering_genomic_signatures.util.parse_distance import (
-    add_distance_arguments,
-    parse_distance_method,
-)
-from clustering_genomic_signatures.dbtools.get_signature_metadata import (
-    get_metadata_for,
-)
-
+from util.generateVLMCElement import generate_vlmc_elements, add_generate_vlmc_args
 
 parser = argparse.ArgumentParser("parser for create vp tree")
 
@@ -40,26 +26,10 @@ parser.add_argument(
     "-o",default="tree.pickle",help="filename where the pickled tree is stored"
 )
 
-add_parse_signature_args(parser)
-add_distance_arguments(parser)
+add_generate_vlmc_args(parser)
 
 args = parser.parse_args()
-db_config_path = "db_config.json"
-
-vlmcs = parse_signatures(args, db_config_path)
-names = [vlmc.name for vlmc in vlmcs]
-meta_data = subset_all_metadata(get_metadata_for(names, db_config_path))
-
-distance_function = parse_distance_method(args)
-tmp = args.distance_function
-args.distance_function = "gc-content"
-fast_dist = parse_distance_method(args)
-args.distance_function = tmp
-
-elements = [
-    VPTreeVLMC(vlmc, distance_function, fast_dist = fast_dist, taxonomic_data = meta_data[name])
-    for name,vlmc in zip(names,vlmcs)
-]
+elements = generate_vlmc_elements(args)
 
 if(args.forest):
     tree = VPForest(elements, random=args.random_vp, max_leaf_size = args.leaf_size)

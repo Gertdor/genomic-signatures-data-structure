@@ -16,7 +16,10 @@ from clustering_genomic_signatures.util.parse_distance import add_distance_argum
 
 from util.distance_util import distance_between_ids
 
-hyper_parameter_xlabel="hyper-parameters, P=pruning factor, K = number of neighbors, gc - gc pruning used"
+hyper_parameter_xlabel = (
+    "hyper-parameters, P=pruning factor, K = number of neighbors, gc - gc pruning used"
+)
+
 
 def plot_dist_calc_to_distance(run_data, variance=False):
 
@@ -42,6 +45,20 @@ def plot_dist_calc_to_distance(run_data, variance=False):
     plt.title("Hyper parameter effect on number of distance calculations made")
 
 
+def unpack_key(keys):
+    labels = []
+    for key in keys:
+        labels.append(
+            "GC " * key["GC"]
+            + "Forest " * key["Forest"]
+            + "P: "
+            + str(key["p"])
+            + " K: "
+            + str(key["k"])
+        )
+    return labels
+
+
 def plot_norm_to_gc(run_data):
     fig = plt.figure()
     run_data = [(r[1], r[0]) for r in run_data]
@@ -53,25 +70,37 @@ def plot_norm_to_gc(run_data):
     )
 
 
-def box_plot_dist(run_data):
-    distances = run_data.get_distances_by_factor()
-    x_tick_labels = run_data.get_keys()
+def box_plot_dist(neighbors, run_data):
 
+    all_distances = run_data.get_distances_by_factor()
+    hyperparams = run_data.get_keys()
+    x_tick_labels = unpack_key(hyperparams)
+
+    comparision_distances = [
+        neighbors[:, int(params["k"])] for params in hyperparams  # Index 0 is itself
+    ]
+
+    print(comparision_distances)
+    distance_diff = [
+        brute_force - found_distances
+        for brute_force, found_distances in zip(all_distances, comparision_distances)
+    ]
+    
     xlabel = hyper_parameter_xlabel
     ylabel = "distance to nearest neighbour"
     title = "Pruning effect on distance to furthest NN"
-    _GS_box_plot(distances, x_tick_labels, xlabel, ylabel, title)
+    _GS_box_plot(distance_diff, x_tick_labels, xlabel, ylabel, title)
 
 
 def box_plot_dist_calcs(run_data):
 
     distance_calcs = run_data.get_ops_by_factor()
-    x_tick_labels = run_data.get_keys()
+    x_tick_labels = unpack_key(run_data.get_keys())
 
     xlabel = hyper_parameter_xlabel
     ylabel = "number of distance calculations"
     title = "Pruning effect on the number of distance calculations made"
-    _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
+    # _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
 
 
 def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False):
@@ -88,7 +117,7 @@ def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False):
     ax.boxplot(data)
     print(stats.describe(data[0]))
 
-    xlabels = run_data.get_keys()
+    xlabels = unpack_key(run_data.get_keys())
     ax.set_xticklabels(x_tick_labels)
     plt.xticks(rotation=65)
 
@@ -268,7 +297,7 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         for counter in family_data_to_plot
     ]
 
-    xlabels = ["brute force"] + run_data.get_keys()
+    xlabels = ["brute force"] + unpack_key(run_data.get_keys())
 
     # TODO seaborn nicer bars
 
@@ -306,13 +335,13 @@ def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k)
     xlabel_locs = np.arange(0, len(x_tick_labels) * (max_k + 3), step=(max_k + 3))
     plt.xticks(xlabel_locs, x_tick_labels, rotation=65)
     bar_width = 5
-    
+
     colors = plt.cm.Accent(np.linspace(0, 1, 8))
 
-    prev = 0 
+    prev = 0
     for i, genus in enumerate(data):
         for j, freq in enumerate(genus):
-            ax.bar(i * (max_k + 3),freq, bottom = prev, color=colors[j], width=bar_width)
+            ax.bar(i * (max_k + 3), freq, bottom=prev, color=colors[j], width=bar_width)
             prev = prev + freq
         prev = 0
     for i in range(max_k + 1):
@@ -338,16 +367,16 @@ def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
 # TODO add a theoretical max (when the genus/family is in the tree)
 def classification_accuracy(names, run_data, db_config_path):
 
-    found_genuses = [[g[0] for g in genuses] for genuses in run_data.classify("genus")]
-    found_families = [
-        [f[0] for f in families] for families in run_data.classify("family")
-    ]
+    found_genuses = [genuses for genuses in run_data.classify("genus")]
+    found_families = [families for families in run_data.classify("family")]
 
     meta_data = get_metadata_for(names.tolist(), db_config_path)
     signatures_used = run_data.get_signatures_used()
     searched_points = [i for batch in signatures_used for i in batch[1]]
-    true_genuses = [meta_data[names[point]]["genus"] for point in searched_points]
-    true_families = [meta_data[names[point]]["family"] for point in searched_points]
+#    import pdb
+#    pdb.set_trace()
+    true_genuses = [meta_data[point]["genus"] for point in searched_points]
+    true_families = [meta_data[point]["family"] for point in searched_points]
 
     genus_matches = [
         sum(_number_of_equal_elements(current_genuses, true_genuses))
@@ -360,12 +389,12 @@ def classification_accuracy(names, run_data, db_config_path):
     values = genus_matches + family_matches
     ranks = ["genus"] * len(genus_matches) + ["family"] * len(family_matches)
 
-    run_settings = run_data.get_keys() * 2
+    run_settings = unpack_key(run_data.get_keys()) * 2
     print(run_settings)
     d = {"values": values, "ranks": ranks, "x": run_settings}
     df = pd.DataFrame(d)
     ax = sns.barplot(data=df, x="x", y="values", hue="ranks")
-    ax.set_xlabel(hyper_parameter_xlabel)    
+    ax.set_xlabel(hyper_parameter_xlabel)
     ax.set_ylabel("number of correctly classified queries")
     ax.set_title("Classification accuracy")
 
@@ -472,9 +501,6 @@ with open(args.input_file, "rb") as f:
 if args.norm_to_gc:
     plot_norm_to_gc(run_data)
 
-if args.boxplots:
-    box_plot_dist(run_data)
-    box_plot_dist_calcs(run_data)
 
 if args.acc_to_dist:
     plot_dist_calc_to_distance(run_data, False)
@@ -485,12 +511,17 @@ if (
     or args.exact_matches
     or args.fn_dist_to_match
     or args.classification_accuracy
+    or args.boxplots
 ):
 
     with open(args.distance_file, "rb") as f:
         (neighbors, names) = pickle.load(f)
     if args.classification_accuracy:
         classification_accuracy(names, run_data, db_config_path)
+
+    if args.boxplots:
+        box_plot_dist(neighbors, run_data)
+        box_plot_dist_calcs(run_data)
 
     if args.fn_dist_to_match:
         plot_FN_dist_to_match(args, neighbors, names, run_data)

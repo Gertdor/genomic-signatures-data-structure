@@ -44,7 +44,6 @@ class VPTreeNode:
 class NearestNeighbors:
     def __init__(self, size, initial_element):
         self._size = size
-        print(size)
         self._ops = 0
         self._node_list = [initial_element for i in range(self._size)]
         self._update_cutoff_dist()
@@ -82,7 +81,7 @@ class NearestNeighbors:
         distances = self.get_distances()
         counts={name:0 for name in taxonomic_data}
         for name, dist in zip(taxonomic_data, distances):
-            counts[name] = counts[name]+(1/dist)
+            counts[name] = counts[name]+(1/(dist+1e-30))
 
         if(return_one):
             return max(counts.items(),key=itemgetter(1))[0]
