@@ -69,27 +69,29 @@ def plot_norm_to_gc(run_data):
         "Frobenius distance to delta GC-content for viruses for 5 nearest neighbors"
     )
 
-
-def box_plot_dist(neighbors, run_data):
-
-    all_distances = run_data.get_distances_by_factor()
+def box_plot_dist_relative(run_data):
+    all_distances = run_data.get_cutoff_by_factor()
     hyperparams = run_data.get_keys()
     x_tick_labels = unpack_key(hyperparams)
+    
+    reference_distances = np.array(all_distances[0])
+    delta_dist = [np.array(d) - reference_distances for d in all_distances]
+    
+    xlabel = hyper_parameter_xlabel
+    ylabel = "difference in distance between reference and the specific hyper parameters"
+    title = "effect of hyper parameters on distance to furthest NN"
+    _GS_box_plot(delta_dist, x_tick_labels, xlabel, ylabel, title)
+    
 
-    comparision_distances = [
-        neighbors[:, int(params["k"])] for params in hyperparams  # Index 0 is itself
-    ]
+def box_plot_dist(run_data):
 
-    print(comparision_distances)
-    distance_diff = [
-        brute_force - found_distances
-        for brute_force, found_distances in zip(all_distances, comparision_distances)
-    ]
+    all_distances = run_data.get_cutoff_by_factor()
+    x_tick_labels = unpack_key(run_data.get_keys())
     
     xlabel = hyper_parameter_xlabel
     ylabel = "distance to nearest neighbour"
-    title = "Pruning effect on distance to furthest NN"
-    _GS_box_plot(distance_diff, x_tick_labels, xlabel, ylabel, title)
+    title = "Distance to furthest NN for different hyper parameters"
+    _GS_box_plot(all_distances, x_tick_labels, xlabel, ylabel, title)
 
 
 def box_plot_dist_calcs(run_data):
@@ -99,8 +101,8 @@ def box_plot_dist_calcs(run_data):
 
     xlabel = hyper_parameter_xlabel
     ylabel = "number of distance calculations"
-    title = "Pruning effect on the number of distance calculations made"
-    # _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
+    title = "number of distance calculations made for different hyper parameters"
+    _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
 
 
 def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False):
@@ -458,7 +460,7 @@ parser.add_argument(
 parser.add_argument("--input_file", help="file name of greedy run data")
 
 parser.add_argument(
-    "--distance_file", help="file for pairwise distance and names for current dataset"
+    "--neighbor_orders", help="file for neighbor order and names for current dataset"
 )
 
 parser.add_argument(
@@ -501,6 +503,10 @@ with open(args.input_file, "rb") as f:
 if args.norm_to_gc:
     plot_norm_to_gc(run_data)
 
+if args.boxplots:
+    box_plot_dist(run_data)
+    box_plot_dist_relative(run_data)
+    box_plot_dist_calcs(run_data)
 
 if args.acc_to_dist:
     plot_dist_calc_to_distance(run_data, False)
@@ -511,17 +517,13 @@ if (
     or args.exact_matches
     or args.fn_dist_to_match
     or args.classification_accuracy
-    or args.boxplots
 ):
 
-    with open(args.distance_file, "rb") as f:
+    with open(args.neighbor_orders, "rb") as f:
         (neighbors, names) = pickle.load(f)
     if args.classification_accuracy:
         classification_accuracy(names, run_data, db_config_path)
 
-    if args.boxplots:
-        box_plot_dist(neighbors, run_data)
-        box_plot_dist_calcs(run_data)
 
     if args.fn_dist_to_match:
         plot_FN_dist_to_match(args, neighbors, names, run_data)
