@@ -23,7 +23,7 @@ parser.add_argument(
     "--forest", action="store_true", help="Should a VPForest be used instead of VPTree"
 )
 parser.add_argument(
-    "-o",default="tree.pickle",help="filename where the pickled tree is stored"
+    "-o", default="tree.pickle", help="filename where the pickled tree is stored"
 )
 
 add_generate_vlmc_args(parser)
@@ -31,10 +31,10 @@ add_generate_vlmc_args(parser)
 args = parser.parse_args()
 elements = generate_vlmc_elements(args)
 
-if(args.forest):
-    tree = VPForest(elements, random=args.random_vp, max_leaf_size = args.leaf_size)
+if args.forest:
+    tree = VPForest(elements, random=args.random_vp, max_leaf_size=args.leaf_size)
 else:
-    tree = VPTree(elements, random=args.random_vp, max_leaf_size = args.leaf_size)
+    tree = VPTree(elements, random=args.random_vp, max_leaf_size=args.leaf_size)
 
 print("saving tree in: " + args.o)
 tree.save(args.o)

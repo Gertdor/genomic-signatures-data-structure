@@ -96,13 +96,14 @@ def branch_length_distribution(vlmcs):
     plt.subplots()
     plt.boxplot(numberOfParam)
     plt.subplots()
-    d = {'max_depth':max_depths,'ys':ys}
+    d = {"max_depth": max_depths, "ys": ys}
     df = pd.DataFrame(data=d)
-    sns.catplot(x='max_depth',y='ys',data=df)
+    sns.catplot(x="max_depth", y="ys", data=df)
     plt.xlabel("max depth of VLMC")
     plt.ylabel("number of branches with depth > maxdepth/2")
     plt.title("distribution of branch depths compared to max depth")
     plt.show()
+
 
 parser = argparse.ArgumentParser(description="distance parser")
 
@@ -111,8 +112,8 @@ add_distance_arguments(parser)
 
 parser.add_argument(
     "-o",
-    default="distances_output.pickle",
-    help="output file name where the distances are saved",
+    default="neighbor_order.pickle",
+    help="output file name where the beighbor orders are saved",
 )
 parser.add_argument(
     "--norm_to_gc", action="store_true", help="calculate the norm_to_gc_distance"
@@ -128,16 +129,18 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--neighbor_order",action="store_true",help="calculate distance and neighbor order"
+    "--neighbor_order",
+    action="store_true",
+    help="calculate distance and neighbor order",
 )
 
 args = parser.parse_args()
 
 vlmcs = parse_signatures(args, "db_config.json")
 
-print("length",len(vlmcs))
+print("length", len(vlmcs))
 
-#branch_length_distribution(vlmcs)
+# branch_length_distribution(vlmcs)
 
 if args.gc_content:
     gc_dist_distribution(vlmcs)
@@ -148,8 +151,10 @@ if args.norm_to_gc:
 if args.neighbor_order:
     start = time.time()
     distance_function = parse_distance_method(args)
-    (neighbor_order,names,distances) = calculate_neighbor_order(vlmcs, distance_function)
-    save_neighbor_order((neighbor_order,names), args.o)
-    with open("distances.pickle","wb") as f:
-        pickle.dump(distances,f)
-    print(time.time()-start)
+    (neighbor_order, names, distances) = calculate_neighbor_order(
+        vlmcs, distance_function
+    )
+    save_neighbor_order((neighbor_order, names), args.o)
+    with open("distances.pickle", "wb") as f:
+        pickle.dump(distances, f)
+    print(time.time() - start)

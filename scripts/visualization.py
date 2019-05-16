@@ -15,6 +15,7 @@ from clustering_genomic_signatures.dbtools.get_signature_metadata import (
 from clustering_genomic_signatures.util.parse_distance import add_distance_arguments
 
 from util.distance_util import distance_between_ids
+from util.numberOfEqualElements import number_of_equal_elements
 
 hyper_parameter_xlabel = (
     "hyper-parameters, P=pruning factor, K = number of neighbors, gc - gc pruning used"
@@ -69,25 +70,28 @@ def plot_norm_to_gc(run_data):
         "Frobenius distance to delta GC-content for viruses for 5 nearest neighbors"
     )
 
+
 def box_plot_dist_relative(run_data):
     all_distances = run_data.get_cutoff_by_factor()
     hyperparams = run_data.get_keys()
     x_tick_labels = unpack_key(hyperparams)
-    
+
     reference_distances = np.array(all_distances[0])
     delta_dist = [np.array(d) - reference_distances for d in all_distances]
-    
+
     xlabel = hyper_parameter_xlabel
-    ylabel = "difference in distance between reference and the specific hyper parameters"
+    ylabel = (
+        "difference in distance between reference and the specific hyper parameters"
+    )
     title = "effect of hyper parameters on distance to furthest NN"
     _GS_box_plot(delta_dist, x_tick_labels, xlabel, ylabel, title)
-    
+
 
 def box_plot_dist(run_data):
 
     all_distances = run_data.get_cutoff_by_factor()
     x_tick_labels = unpack_key(run_data.get_keys())
-    
+
     xlabel = hyper_parameter_xlabel
     ylabel = "distance to nearest neighbour"
     title = "Distance to furthest NN for different hyper parameters"
@@ -355,10 +359,6 @@ def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k)
     ax.legend()
 
 
-def _number_of_equal_elements(list1, list2):
-    return [x == y for x, y in zip(list1, list2)]
-
-
 def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
     NNS = []
     for (tree, points) in signatures_used:
@@ -375,29 +375,29 @@ def classification_accuracy(names, run_data, db_config_path):
     meta_data = get_metadata_for(names.tolist(), db_config_path)
     signatures_used = run_data.get_signatures_used()
     searched_points = [i for batch in signatures_used for i in batch[1]]
-#    import pdb
-#    pdb.set_trace()
+
     true_genuses = [meta_data[point]["genus"] for point in searched_points]
     true_families = [meta_data[point]["family"] for point in searched_points]
 
     genus_matches = [
         sum(_number_of_equal_elements(current_genuses, true_genuses))
+        / len(current_genuses)
         for current_genuses in found_genuses
     ]
     family_matches = [
         sum(_number_of_equal_elements(current_families, true_families))
+        / len(current_families)
         for current_families in found_families
     ]
     values = genus_matches + family_matches
     ranks = ["genus"] * len(genus_matches) + ["family"] * len(family_matches)
 
     run_settings = unpack_key(run_data.get_keys()) * 2
-    print(run_settings)
     d = {"values": values, "ranks": ranks, "x": run_settings}
     df = pd.DataFrame(d)
     ax = sns.barplot(data=df, x="x", y="values", hue="ranks")
     ax.set_xlabel(hyper_parameter_xlabel)
-    ax.set_ylabel("number of correctly classified queries")
+    ax.set_ylabel("proportion of correctly classified queries")
     ax.set_title("Classification accuracy")
 
 
@@ -523,7 +523,6 @@ if (
         (neighbors, names) = pickle.load(f)
     if args.classification_accuracy:
         classification_accuracy(names, run_data, db_config_path)
-
 
     if args.fn_dist_to_match:
         plot_FN_dist_to_match(args, neighbors, names, run_data)

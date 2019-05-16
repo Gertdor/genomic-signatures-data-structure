@@ -22,20 +22,21 @@ from clustering_genomic_signatures.util.parse_distance import (
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VLMCElement import VPTreeVLMC
-#from data_analysis.distance_analysis import distance_function_stats
-#from data_analysis.distance_function_accuracy import (
+
+# from data_analysis.distance_analysis import distance_function_stats
+# from data_analysis.distance_function_accuracy import (
 #    save_distances,
 #    load_distances,
 #    calculate_pairwise_distance,
 #    get_distance_accuracy,
 #    calc_pariwise_fast,
-#)
+# )
 
 
 def test_pickle(elements):
 
     tree = VPTree(elements)
-    VPTree.save(tree,"test.pickle")
+    VPTree.save(tree, "test.pickle")
     data = VPTree.load("test.pickle")
     assert tree == data
 
@@ -90,7 +91,7 @@ distance_function = parse_distance_method(args)
 elements = [VPTreeVLMC(vlmc, distance_function, vlmc.name) for vlmc in vlmcs]
 
 test_pickle(elements)
-#test_overlap(elements)
-#test_random(elements)
-#test_leaf_size()
-#test_return_type(elements)
+# test_overlap(elements)
+# test_random(elements)
+# test_leaf_size()
+# test_return_type(elements)

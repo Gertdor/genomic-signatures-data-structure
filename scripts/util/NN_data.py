@@ -18,7 +18,7 @@ class NNData:
 
     def get_distances_by_factor(self, un_pack=True):
         return [run.get_distances(un_pack) for run in self.run_data]
-    
+
     def get_cutoff_by_factor(self):
         return [run.get_cutoffs() for run in self.run_data]
 
@@ -34,7 +34,7 @@ class NNData:
     def get_greedy_factors(self):
         return self.greedy_factors
 
-    def classify(self, rank, one_class = True):
+    def classify(self, rank, one_class=True):
         return [run.classify(rank, True) for run in self.run_data]
 
     def get_k_values(self):
@@ -64,9 +64,11 @@ class SingleRunData:
             for queries in self.run_data
             for NNS in queries
         ]
-    
+
     def get_cutoffs(self):
-        cutoffs = [NNS.get_cutoff_dist() for queries in self.run_data for NNS in queries]
+        cutoffs = [
+            NNS.get_cutoff_dist() for queries in self.run_data for NNS in queries
+        ]
         return cutoffs
 
     def get_distances(self, unpack):

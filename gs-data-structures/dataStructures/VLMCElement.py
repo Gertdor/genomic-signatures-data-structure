@@ -1,7 +1,15 @@
 from clustering_genomic_signatures.distance import FrobeniusNorm
 
+
 class VPTreeVLMC:
-    def __init__(self, value, distance_function, identifier=None, fast_dist=None, taxonomic_data = None):
+    def __init__(
+        self,
+        value,
+        distance_function,
+        identifier=None,
+        fast_dist=None,
+        taxonomic_data=None,
+    ):
         self.value = value
         self.taxonomic_data = taxonomic_data
         self.dist_func = distance_function

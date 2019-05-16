@@ -71,20 +71,22 @@ class NearestNeighbors:
 
     def get_distances(self):
         return [nn[0] for nn in self._node_list]
-    
+
     def get_taxonomic_data(self, rank):
         return [nn[1].get_taxonomic_data(rank) for nn in self._node_list]
 
     def classify(self, rank, return_one=False):
-        
+
         taxonomic_data = self.get_taxonomic_data(rank)
         distances = self.get_distances()
-        counts={name:0 for name in taxonomic_data}
+        counts = {name: 0 for name in taxonomic_data}
         for name, dist in zip(taxonomic_data, distances):
-            counts[name] = counts[name]+(1/(dist+1e-30))
+            counts[name] = counts[name] + (
+                1 / (dist + 1e-30)
+            )  # 1e-30 to avoid division by zero
 
-        if(return_one):
-            return max(counts.items(),key=itemgetter(1))[0]
+        if return_one:
+            return max(counts.items(), key=itemgetter(1))[0]
         return counts
 
     def get_size(self):
@@ -114,7 +116,7 @@ class VPTree:
     def __init__(self, values, random=True, max_leaf_size=1):
         self.tree = VPTree._createVPTree(values, random, max_leaf_size)
 
-    def save(tree,fileName):
+    def save(tree, fileName):
         """ save a vantage point tree with pickle """
         with open(fileName, "wb") as f:
             pickle.dump(tree, f)

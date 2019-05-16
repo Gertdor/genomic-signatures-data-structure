@@ -2,7 +2,6 @@ import argparse
 import pickle
 from itertools import product
 import numpy as np
-from multiprocessing import Pool
 import time
 
 from dataStructures.VPForest import VPForest
@@ -12,7 +11,8 @@ from dataStructures.VLMCElement import VPTreeVLMC
 
 from util.NN_data import NNData
 from util.splitElements import split_elements
-from util.generateVLMCElements import generate_vlmc_elements,add_generate_vlmc_args
+from util.generateVLMCElements import generate_vlmc_elements, add_generate_vlmc_args
+
 
 def hyper_parameter_test(elements, args):
     """ Perform a test on how the greedy factor effects different metrics
@@ -45,7 +45,7 @@ def hyper_parameter_test(elements, args):
     for factor in factors:
         all_runs[factor] = []
     all_signatures_used = []
-    
+
     for run_nbr in range(args.number_of_runs):
         print("current run number:", run_nbr)
         (tree_elems, search_elems) = split_elements(elements, args)
@@ -169,7 +169,7 @@ add_generate_vlmc_args(parser)
 args = parser.parse_args()
 
 elements = generate_vlmc_elements(args)
-
+print("number of VLMC: " + str(len(elements)))
 start_time = time.time()
 hyper_parameter_test(elements, args)
 print("time:", time.time() - start_time)
