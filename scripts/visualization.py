@@ -44,6 +44,9 @@ def plot_dist_calc_to_distance(run_data, variance=False):
     plt.xlabel("average distance to nearest neighbor")
     plt.ylabel("average number of distance calculations")
     plt.title("Hyper parameter effect on number of distance calculations made")
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"dist_distCalc_XY.png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"dist_distCalc_XY.pdf"),format=pdf)
 
 
 def unpack_key(keys):
@@ -69,6 +72,9 @@ def plot_norm_to_gc(run_data):
     plt.title(
         "Frobenius distance to delta GC-content for viruses for 5 nearest neighbors"
     )
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"FN_to_GC.png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"FN_to_GC.pdf"),format=pdf)
 
 
 def box_plot_dist_relative(run_data):
@@ -84,7 +90,7 @@ def box_plot_dist_relative(run_data):
         "difference in distance between reference and the specific hyper parameters"
     )
     title = "effect of hyper parameters on distance to furthest NN"
-    _GS_box_plot(delta_dist, x_tick_labels, xlabel, ylabel, title)
+    _GS_box_plot(delta_dist, x_tick_labels, xlabel, ylabel, title, "delta_distance")
 
 
 def box_plot_dist(run_data):
@@ -95,7 +101,7 @@ def box_plot_dist(run_data):
     xlabel = hyper_parameter_xlabel
     ylabel = "distance to nearest neighbour"
     title = "Distance to furthest NN for different hyper parameters"
-    _GS_box_plot(all_distances, x_tick_labels, xlabel, ylabel, title)
+    _GS_box_plot(all_distances, x_tick_labels, xlabel, ylabel, title, "distance")
 
 
 def box_plot_dist_calcs(run_data):
@@ -106,10 +112,10 @@ def box_plot_dist_calcs(run_data):
     xlabel = hyper_parameter_xlabel
     ylabel = "number of distance calculations"
     title = "number of distance calculations made for different hyper parameters"
-    _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True)
+    _GS_box_plot(distance_calcs, x_tick_labels, xlabel, ylabel, title, True, "dist_calc")
 
 
-def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False):
+def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False, file_name=None):
 
     fig = plt.figure()
     border_width = 0.1
@@ -133,6 +139,9 @@ def _GS_box_plot(data, x_tick_labels, xlabel, ylabel, title, log=False):
         ax.set_yscale("log")
 
     plt.title(title)
+    if(args.save_dir is not None and file_name not None):
+        fig.savefig(os.path.join(args.save_dir,"boxplot"+file_name+".png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"boxplot"+file_name+".pdf"),format=pdf)
 
 
 def _get_found_points(neighbors, run_data, include_ground_truth=True, un_pack=True):
@@ -200,6 +209,8 @@ def _true_distance_to_bio_match(neighbors, names, run_data, max_distance=50):
 
 
 def plot_signature_dist_to_match(neighbors, names, run_data, max_distance=50):
+    
+    fig = plt.figure()
 
     genus_distances, family_distances = _true_distance_to_bio_match(
         neighbors, names, run_data, max_distance
@@ -217,9 +228,16 @@ def plot_signature_dist_to_match(neighbors, names, run_data, max_distance=50):
     plt.ylabel("number of occurances")
     plt.title("distance in signatures to closest signature of the same family")
     plt.hist(family_distances, max_distance, facecolor="green")
+    
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"signature_dist_to_match.png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"signature_dist_to_match.pdf"),format=pdf)
+
 
 
 def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distance=50):
+    
+    fig = plt.figure()
 
     genus_distances, family_distances = _true_distance_to_bio_match(
         neighbors, names, run_data, max_signature_distance
@@ -230,7 +248,6 @@ def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distan
     genus_distances = distance_between_ids(args, genus_pairs, names)
     family_distances = distance_between_ids(args, family_pairs, names)
 
-    plt.figure()
     plt.hist(genus_distances, 50, facecolor="blue")
     plt.xlabel("Frobenius norm distance to closest matching neighbor")
     plt.ylabel("number of occurances")
@@ -240,10 +257,17 @@ def plot_FN_dist_to_match(args, neighbors, names, run_data, max_signature_distan
     plt.ylabel("number of occurances")
     plt.title("frobenius norm distance to closest signature of the same family")
     plt.hist(family_distances, 50, facecolor="green")
+    
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"FN_dist_to_match.png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"FN_dist_to_match.pdf"),format=pdf)
 
 
 # TODO maybe a bug, look over this?
 def exact_matches(neighbors, names, run_data):
+    
+    fig = plt.figure()
+
     all_points = _get_found_points(neighbors, run_data, include_ground_truth=True)
     ground_truth = all_points[0]
     rest = all_points[1:]
@@ -256,6 +280,10 @@ def exact_matches(neighbors, names, run_data):
     ax = plt.axes()
     ax.scatter(range(len(number_of_matches)), number_of_matches)
     plt.ylim(0, max(number_of_matches))
+    
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"exact_match_scatter.png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"exact_match_scatter.pdf"),format=pdf)
 
 
 def biological_accuracy(neighbors, names, run_data, db_config_path):
@@ -314,6 +342,7 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         y_descript="fraction of the nearest neighbors which were of the same family",
         x_tick_labels=xlabels,
         max_k=max_k,
+        file_name="_family",
     )
 
     _bio_acc_bar_plot(
@@ -323,10 +352,11 @@ def biological_accuracy(neighbors, names, run_data, db_config_path):
         y_descript="fraction nearest neighbors which were of the same genus",
         x_tick_labels=xlabels,
         max_k=max_k,
+        file_name="_genus",
     )
 
 
-def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k):
+def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k, file_name):
 
     fig = plt.figure()
     border_width = 0.1
@@ -357,6 +387,10 @@ def _bio_acc_bar_plot(data, title, x_descript, y_descript, x_tick_labels, max_k)
     ax.set_xlabel(x_descript)
     ax.set_ylabel(y_descript)
     ax.legend()
+    
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"Bio_acc_bar"+file_name+".png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"Bio_acc_bar"+file_name+".pdf"),format=pdf)
 
 
 def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
@@ -368,6 +402,8 @@ def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
 
 # TODO add a theoretical max (when the genus/family is in the tree)
 def classification_accuracy(names, run_data, db_config_path):
+    
+    fig = plt.figure()
 
     found_genuses = [genuses for genuses in run_data.classify("genus")]
     found_families = [families for families in run_data.classify("family")]
@@ -399,6 +435,10 @@ def classification_accuracy(names, run_data, db_config_path):
     ax.set_xlabel(hyper_parameter_xlabel)
     ax.set_ylabel("proportion of correctly classified queries")
     ax.set_title("Classification accuracy")
+    
+    if(args.save_dir is not None):
+        fig.savefig(os.path.join(args.save_dir,"Classification_acc_bar.png"),format=png)
+        fig.savefig(os.path.join(args.save_dir,"Classification_acc_bar.pdf"),format=pdf)
 
 
 def _nearest_neighbor_in_tree(neighbor_array, tree, points):
@@ -469,6 +509,10 @@ parser.add_argument(
     help="plot the classification accuracy",
 )
 
+parser.add_argument(
+    "--save_dir",defualt=None,help="Directory to save the plots in. If left blank plots are not saved"
+)
+
 add_distance_arguments(parser)
 
 args = parser.parse_args()
@@ -537,4 +581,4 @@ if (
         plot_signature_dist_to_match(neighbors, names, run_data)
 
 plt.style.use("seaborn-whitegrid")
-plt.show()
+#plt.show()
