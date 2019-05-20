@@ -76,7 +76,7 @@ def hyper_parameter_test(elements, args):
 def one_nn_search_run(tree, search_elems, factors, parallel):
     if parallel:
         run_NNS = tree.many_nearest_neighbor(
-            search_elems, factors[2], factors[1], factors[3]
+            search_elems, factors[2], factors[1], factors[3], args.pool_size
         )
     else:
         run_NNS = [
@@ -102,6 +102,13 @@ parser.add_argument(
 parser.add_argument("--k_start", type=int, default=1, help="initial value of k")
 parser.add_argument("--k_end", default=1, type=int, help="maximum value of k")
 parser.add_argument("--k_step", default=1, type=int, help="step size of k")
+
+parser.add_argument(
+    "--pool_size",
+    type=int,
+    default=3,
+    help="size of worker pool for parallel execution"
+)
 
 parser.add_argument(
     "--greedy_start",

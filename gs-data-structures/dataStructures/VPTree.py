@@ -198,9 +198,9 @@ class VPTree:
             print(indent, "}", end="", sep="")
 
     # TODO fairly poor solution, a lot of overhead.
-    def many_nearest_neighbor(self, points, k=1, greedy_factor=1, gc_pruning=False):
+    def many_nearest_neighbor(self, points, k=1, greedy_factor=1, gc_pruning=False, pool_size = 3):
 
-        with Pool(3) as p:
+        with Pool(pool_size) as p:
             return p.map(
                 NNRunner(self, k, greedy_factor, gc_pruning), points, chunksize=100
             )

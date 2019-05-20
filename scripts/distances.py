@@ -116,6 +116,11 @@ parser.add_argument(
     help="output file name where the beighbor orders are saved",
 )
 parser.add_argument(
+    "--distance_file",
+    default="distances.pickle",
+    help="name of file to save distances in",
+)
+parser.add_argument(
     "--norm_to_gc", action="store_true", help="calculate the norm_to_gc_distance"
 )
 parser.add_argument(
@@ -155,6 +160,6 @@ if args.neighbor_order:
         vlmcs, distance_function
     )
     save_neighbor_order((neighbor_order, names), args.o)
-    with open("distances.pickle", "wb") as f:
+    with open(args.distance_file, "wb") as f:
         pickle.dump(distances, f)
     print(time.time() - start)
