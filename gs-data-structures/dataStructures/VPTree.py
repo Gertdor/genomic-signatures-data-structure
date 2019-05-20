@@ -81,9 +81,8 @@ class NearestNeighbors:
         distances = self.get_distances()
         counts = {name: 0 for name in taxonomic_data}
         for name, dist in zip(taxonomic_data, distances):
-            counts[name] = counts[name] + (
-                1 / (dist + 1e-30)
-            )  # 1e-30 to avoid division by zero
+            counts[name] = counts[name] + 1 / (dist + 1e-30)
+            # 1e-30 to avoid division by zero
 
         if return_one:
             return max(counts.items(), key=itemgetter(1))[0]

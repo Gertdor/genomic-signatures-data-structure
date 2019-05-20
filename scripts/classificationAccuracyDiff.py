@@ -1,48 +1,55 @@
 import argparse
 import pickle
 import numpy as np
-
+from operator import itemgetter
 from clustering_genomic_signatures.dbtools.get_signature_metadata import (
     get_metadata_for,
 )
 from util.numberOfEqualElements import number_of_equal_elements
 
+class neighborMatrix:
+    
+    def __init__(self, neighbor_order, names, distances, k):
+        NNS = neighbor_order[:, 1:k+1]
+        NNS_dist = [[distances[i,name] for name in names] for i,names in enumerate(NNS)]
 
-def x(orig_matrix, orig_names, other_matrix, other_names, args):
+        self.NNS = {
+            name:[names[n] for n in neighbors] for name, neighbors in zip(names, NNS)
+        }
+        self.distances = {
+            name:dist for name, dist in zip(names, NNS_dist)
+        }
+        self.fails=0
 
-    orig_neighbors = orig_matrix[:, 1]
-    other_neighbors = other_matrix[:, 1]
-    found_organisms = {
-        name: orig_names[neighbor] for name, neighbor in zip(orig_names, orig_neighbors)
-    }
-    other_organisms = {
-        name: other_names[neighbor]
-        for name, neighbor in zip(other_names, other_neighbors)
-    }
+    def classify_all(self, points, meta_data, true):
+        classes = [self._classify_one(point, meta_data, t) for point,t in zip(points,true)]
+        return zip(*classes)
 
-    name_intersect = [name for name in orig_names if name in other_names]
+    def _classify_one(self, point, meta_data, true):
+        try:
+            genuses = [meta_data[neighbor]["genus"] for neighbor in self.NNS[point]]
+            families = [meta_data[neighbor]["family"] for neighbor in self.NNS[point]]
+            genus_count = {name:0 for name in genuses}
+            family_count = {name:0 for name in families}
+            for genus,family,dist in zip (genuses, families, self.distances[point]):
+                genus_count[genus] = genus_count[genus] + 1/(dist+1e-30)
+                family_count[family] = family_count[family] + 1/(dist+1e-30)
+            genus = max(genus_count.items(),key=itemgetter(1))[0]
+            family = max(family_count.items(),key=itemgetter(1))[0]
+            return(genus,family)
+        except Exception as e:
+            self.fails += 1
+            print("fail")
+            return("none","none")
 
-    meta_data = get_metadata_for(orig_names, "db_config.json")
-
+def classify_test(original, other, meta_data, name_intersect):
+    
     true_genuses = [meta_data[point]["genus"] for point in name_intersect]
     true_families = [meta_data[point]["family"] for point in name_intersect]
-    orig_genuses = []
-    other_genuses = []
-    orig_families = []
-    other_families = []
-    print("metadata ready")
-    for point in name_intersect:
-        try:
-            orig_genuses.append(meta_data[found_organisms[point]]["genus"])
-            orig_families.append(meta_data[found_organisms[point]]["family"])
-            other_genuses.append(meta_data[other_organisms[point]]["genus"])
-            other_families.append(meta_data[other_organisms[point]]["family"])
-        except Exception:
-            print("fail")
-            other_genuses.append("none")
-            other_families.append("none")
-            continue
 
+    (orig_genuses, orig_families) = original.classify_all(name_intersect, meta_data, true_genuses)
+    (other_genuses, other_families) = other.classify_all(name_intersect, meta_data, true_genuses)
+    
     print(number_of_equal_elements(orig_genuses, true_genuses) / len(orig_genuses))
     print(number_of_equal_elements(orig_families, true_families) / len(orig_families))
 
@@ -53,26 +60,33 @@ def x(orig_matrix, orig_names, other_matrix, other_names, args):
     print(number_of_equal_elements(orig_families, other_families) / len(orig_families))
 
 
-# ha två matriser
-# för varje element
-#   vilken är NN/3 NN
-#   i vilken utsträckning är det en hit/miss
-
-
 parser = argparse.ArgumentParser(description="")
 
 parser.add_argument("--original_matrix", help="path to original distance matrix")
+parser.add_argument("--original_dist",help="distance matrix")
 parser.add_argument("--other_matrix", help="path to other distance matrix")
+parser.add_argument("--other_dist",help="distance matrix of other")
 parser.add_argument("--k", default=1, help="number of neighbors")
 
 args = parser.parse_args()
 
-# give both name lists, otherwise you cannot translate.
-
 with open(args.original_matrix, "rb") as f:
     (neighbors, names) = pickle.load(f)
+
+with open(args.original_dist,"rb") as f:
+    distances = pickle.load(f)
+
+original = neighborMatrix(neighbors, names, distances, int(args.k))
 
 with open(args.other_matrix, "rb") as f:
     (other_neighbors, other_names) = pickle.load(f)
 
-x(neighbors, names, other_neighbors, other_names, args)
+with open(args.other_dist,"rb") as f:
+    other_distances = pickle.load(f)
+
+other = neighborMatrix(other_neighbors, other_names, other_distances, int(args.k))
+
+name_intersect = [name for name in names if name in other_names]
+meta_data = get_metadata_for(name_intersect, "db_config.json")
+
+classify_test(original, other, meta_data, name_intersect)

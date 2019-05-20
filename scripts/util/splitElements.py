@@ -1,7 +1,7 @@
 import numpy as np
+from sklearn.model_selection import RepeatedKFold 
 
-
-def split_elements(elems, args):
+def split_elements_random(elems, args):
 
     if not args.no_randomize_elements:
         elements = elems.copy()
@@ -22,3 +22,5 @@ def split_elements(elems, args):
     ]
 
     return (tree_elements, search_elements)
+
+
