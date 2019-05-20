@@ -10,9 +10,9 @@ from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VLMCElement import VPTreeVLMC
 
 from util.NN_data import NNData
-from util.splitElements import split_elements
 from util.generateVLMCElements import generate_vlmc_elements, add_generate_vlmc_args
 
+from sklearn.model_selection import RepeatedKFold
 
 def hyper_parameter_test(elements, args):
     """ Perform a test on how the greedy factor effects different metrics
@@ -39,16 +39,20 @@ def hyper_parameter_test(elements, args):
         forest = [True, False]
     else:
         forest = [False]
-
+    
     all_runs = {}
     factors = [p for p in product(forest, greedy_factors, k_values, gc_prune)]
     for factor in factors:
         all_runs[factor] = []
     all_signatures_used = []
+    splitter = RepeatedKFold(args.n_split,args.n_repeat)
+    i = 0
+    for tree_indexes, search_indexes in splitter.split(elements):
+        print("current run number:", i)
+        i+=1
+        tree_elems = elements[tree_indexes]
+        search_elems = elements[search_indexes]
 
-    for run_nbr in range(args.number_of_runs):
-        print("current run number:", run_nbr)
-        (tree_elems, search_elems) = split_elements(elements, args)
         if args.forest:
             forest = VPForest(
                 tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size
@@ -119,17 +123,17 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--number_of_runs",
+    "--n_repeat",
     type=int,
     default=1,
-    help="How many times should an NN search be repeated for a specific setting.",
+    help="How many times should the entire dataset be used. Used for sklearn's RepeatedKFold",
 )
 
 parser.add_argument(
-    "--number_of_searches",
+    "--n_split",
     type=int,
-    default=0,
-    help="how many of the elements should be used to NN search in the tree?",
+    default=5,
+    help="how many portions should the dataset be split into. Used for sklearn's RepeatedKFold"
 )
 
 parser.add_argument(
@@ -138,15 +142,6 @@ parser.add_argument(
     help="Should the vantage point be choosen at random?",
 )
 
-parser.add_argument(
-    "--cutoff",
-    type=float,
-    default=0.8,
-    help=(
-        "How large portion of the data should be stored in the tree."
-        "The rest is searched for the nearest neighbour"
-    ),
-)
 parser.add_argument(
     "--leaf_size",
     type=int,
@@ -168,7 +163,7 @@ parser.add_argument(
 add_generate_vlmc_args(parser)
 args = parser.parse_args()
 
-elements = generate_vlmc_elements(args)
+elements = np.array(generate_vlmc_elements(args))
 print("number of VLMC: " + str(len(elements)))
 start_time = time.time()
 hyper_parameter_test(elements, args)
