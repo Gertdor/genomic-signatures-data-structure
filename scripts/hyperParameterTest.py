@@ -45,14 +45,14 @@ def hyper_parameter_test(elements, args):
     for factor in factors:
         all_runs[factor] = []
     all_signatures_used = []
-    splitter = RepeatedKFold(args.n_split,args.n_repeat)
+    splitter = RepeatedKFold(args.n_split,args.n_repeat, random_state = args.random_seed)
     i = 0
     for tree_indexes, search_indexes in splitter.split(elements):
         print("current run number:", i)
         i+=1
         tree_elems = elements[tree_indexes]
         search_elems = elements[search_indexes]
-
+        
         if args.forest:
             forest = VPForest(
                 tree_elems, random=args.random_vp, max_leaf_size=args.leaf_size
@@ -85,7 +85,6 @@ def one_nn_search_run(tree, search_elems, factors, parallel):
         ]
     return run_NNS
 
-
 parser = argparse.ArgumentParser(description="test args")
 
 parser.add_argument(
@@ -115,6 +114,12 @@ parser.add_argument(
     type=float,
     default=1,
     help="start value of greedy_factor when running greedy__test",
+)
+parser.add_argument(
+    "--random_seed",
+    type=int,
+    default=None,
+    help="the random seed used to split the data",
 )
 parser.add_argument(
     "--greedy_end",
@@ -169,7 +174,6 @@ parser.add_argument(
 )
 add_generate_vlmc_args(parser)
 args = parser.parse_args()
-
 elements = np.array(generate_vlmc_elements(args))
 print("number of VLMC: " + str(len(elements)))
 start_time = time.time()
