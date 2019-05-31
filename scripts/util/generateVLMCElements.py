@@ -15,7 +15,18 @@ from clustering_genomic_signatures.dbtools.get_signature_metadata import (
 
 
 def generate_vlmc_elements(args):
-    vlmcs = parse_signatures(args, args.db_config)
+    if args.condition_file is not None:
+        with open(args.condition_file,"r") as f:
+            aids = [a.strip() for a in f.readlines()]
+        tmp = args.condition
+        args.condition = "signature.aid = 'AB026117.1'"
+        all_vlmcs = parse_signatures(args, args.db_config)
+        print(len(all_vlmcs))
+    else:
+        vlmcs = parse_signatures(args, args.db_config)
+
+    
+
     names = [vlmc.name for vlmc in vlmcs]
     meta_data = subset_all_metadata(get_metadata_for(names, args.db_config))
 
@@ -24,7 +35,7 @@ def generate_vlmc_elements(args):
     args.distance_function = "gc-content"
     fast_dist = parse_distance_method(args)
     args.distance_function = tmp
-
+    
     elements = [
         VPTreeVLMC(
             vlmc, distance_function, fast_dist=fast_dist, taxonomic_data=meta_data[name]
@@ -37,3 +48,6 @@ def generate_vlmc_elements(args):
 def add_generate_vlmc_args(parser):
     add_parse_signature_args(parser)
     add_distance_arguments(parser)
+    parser.add_argument(
+        "--condition_file",default=None, help="file containing the aid of the organisms to add"
+    )

@@ -4,7 +4,7 @@ import pickle
 from dataStructures.VPForest import VPForest
 from dataStructures.VPTreeElement import VPTreeElement
 from dataStructures.VPTree import VPTree, VPTreeNode
-from util.generateVLMCElement import generate_vlmc_elements, add_generate_vlmc_args
+from util.generateVLMCElements import generate_vlmc_elements, add_generate_vlmc_args
 
 parser = argparse.ArgumentParser("parser for create vp tree")
 
