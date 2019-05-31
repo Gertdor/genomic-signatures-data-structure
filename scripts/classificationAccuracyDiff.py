@@ -6,6 +6,7 @@ from clustering_genomic_signatures.dbtools.get_signature_metadata import (
     get_metadata_for,
 )
 from util.numberOfEqualElements import number_of_equal_elements
+from collections import defaultdict
 
 class neighborMatrix:
     
@@ -26,21 +27,20 @@ class neighborMatrix:
         return zip(*classes)
 
     def _classify_one(self, point, meta_data, true):
-        try:
-            genuses = [meta_data[neighbor]["genus"] for neighbor in self.NNS[point]]
-            families = [meta_data[neighbor]["family"] for neighbor in self.NNS[point]]
-            genus_count = {name:0 for name in genuses}
-            family_count = {name:0 for name in families}
-            for genus,family,dist in zip (genuses, families, self.distances[point]):
-                genus_count[genus] = genus_count[genus] + 1/(dist+1e-30)
-                family_count[family] = family_count[family] + 1/(dist+1e-30)
-            genus = max(genus_count.items(),key=itemgetter(1))[0]
-            family = max(family_count.items(),key=itemgetter(1))[0]
-            return(genus,family)
-        except Exception as e:
-            self.fails += 1
-            print("fail")
-            return("none","none")
+        genuses = [meta_data[neighbor]["genus"] for neighbor in self.NNS[point]]
+        families = [meta_data[neighbor]["family"] for neighbor in self.NNS[point]]
+        genus_count = {name:0 for name in genuses}
+        family_count = {name:0 for name in families}
+        for genus,family,dist in zip (genuses, families, self.distances[point]):
+            genus_count[genus] = genus_count[genus] + 1/(dist+1e-30)
+            family_count[family] = family_count[family] + 1/(dist+1e-30)
+        genus = max(genus_count.items(),key=itemgetter(1))[0]
+        family = max(family_count.items(),key=itemgetter(1))[0]
+        return(genus,family)
+
+def default_class():
+    print("fail")
+    return {"genus":"none","family":"none"}
 
 def classify_test(original, other, meta_data, name_intersect):
     
@@ -87,6 +87,6 @@ with open(args.other_dist,"rb") as f:
 other = neighborMatrix(other_neighbors, other_names, other_distances, int(args.k))
 
 name_intersect = [name for name in names if name in other_names]
-meta_data = get_metadata_for(name_intersect, "db_config.json")
+meta_data = defaultdict(default_class,get_metadata_for(name_intersect, "db_config.json"))
 
 classify_test(original, other, meta_data, name_intersect)
