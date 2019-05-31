@@ -46,18 +46,20 @@ def classify_test(original, other, meta_data, name_intersect):
     
     true_genuses = [meta_data[point]["genus"] for point in name_intersect]
     true_families = [meta_data[point]["family"] for point in name_intersect]
-
     (orig_genuses, orig_families) = original.classify_all(name_intersect, meta_data, true_genuses)
-    (other_genuses, other_families) = other.classify_all(name_intersect, meta_data, true_genuses)
+    
+    if other is not None:
+        (other_genuses, other_families) = other.classify_all(name_intersect, meta_data, true_genuses)
     
     print(number_of_equal_elements(orig_genuses, true_genuses) / len(orig_genuses))
     print(number_of_equal_elements(orig_families, true_families) / len(orig_families))
+    
+    if other is not None:
+        print(number_of_equal_elements(true_genuses, other_genuses) / len(other_genuses))
+        print(number_of_equal_elements(true_families, other_families) / len(other_families))
 
-    print(number_of_equal_elements(true_genuses, other_genuses) / len(other_genuses))
-    print(number_of_equal_elements(true_families, other_families) / len(other_families))
-
-    print(number_of_equal_elements(orig_genuses, other_genuses) / len(orig_genuses))
-    print(number_of_equal_elements(orig_families, other_families) / len(orig_families))
+        print(number_of_equal_elements(orig_genuses, other_genuses) / len(orig_genuses))
+        print(number_of_equal_elements(orig_families, other_families) / len(orig_families))
 
 
 parser = argparse.ArgumentParser(description="")
@@ -78,15 +80,20 @@ with open(args.original_dist,"rb") as f:
 
 original = neighborMatrix(neighbors, names, distances, int(args.k))
 
-with open(args.other_matrix, "rb") as f:
-    (other_neighbors, other_names) = pickle.load(f)
+if args.other_matrix is not None or args.other_dist is not None:
+    with open(args.other_matrix, "rb") as f:
+        (other_neighbors, other_names) = pickle.load(f)
+    
+    with open(args.other_dist,"rb") as f:
+        other_distances = pickle.load(f)
 
-with open(args.other_dist,"rb") as f:
-    other_distances = pickle.load(f)
+    other = neighborMatrix(other_neighbors, other_names, other_distances, int(args.k))
 
-other = neighborMatrix(other_neighbors, other_names, other_distances, int(args.k))
+    name_intersect = [name for name in names if name in other_names]
+else:
+    other = None
+    name_intersect = names
 
-name_intersect = [name for name in names if name in other_names]
-meta_data = defaultdict(default_class,get_metadata_for(name_intersect, "db_config.json"))
+meta_data = defaultdict(default_class,get_metadata_for(name_intersect, "../settings/db_config.json"))
 
 classify_test(original, other, meta_data, name_intersect)

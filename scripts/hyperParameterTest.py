@@ -61,6 +61,7 @@ def hyper_parameter_test(elements, args):
         tree_elem_names = [elem.identifier for elem in tree_elems]
         search_elem_names = [elem.identifier for elem in search_elems]
         all_signatures_used.append((tree_elem_names, search_elem_names))
+        start = time.time()
         for factor in factors:
             if factor[0]:
                 run_NNS = one_nn_search_run(forest, search_elems, factor, args.parallel)
@@ -68,6 +69,7 @@ def hyper_parameter_test(elements, args):
                 run_NNS = one_nn_search_run(tree, search_elems, factor, args.parallel)
             all_runs[factor].append(run_NNS)
 
+        print("search time:", time.time()-start)
     data = NNData(all_runs, all_signatures_used, factors)
     with open(args.o, "wb") as f:
         pickle.dump(data, f)
