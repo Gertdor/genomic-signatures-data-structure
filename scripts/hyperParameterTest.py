@@ -45,7 +45,7 @@ def hyper_parameter_test(elements, args):
     for factor in factors:
         all_runs[factor] = []
     all_signatures_used = []
-    splitter = RepeatedKFold(args.n_split,args.n_repeat, random_state = args.random_seed)
+    splitter = RepeatedKFold(args.n_split, args.n_repeat, random_state = args.random_seed)
     i = 0
     for tree_indexes, search_indexes in splitter.split(elements):
         print("current run number:", i)

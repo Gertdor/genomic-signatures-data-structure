@@ -18,14 +18,11 @@ def generate_vlmc_elements(args):
     if args.condition_file is not None:
         with open(args.condition_file,"r") as f:
             aids = [a.strip() for a in f.readlines()]
-        tmp = args.condition
-        args.condition = "signature.aid = 'AB026117.1'"
         all_vlmcs = parse_signatures(args, args.db_config)
-        print(len(all_vlmcs))
+        vlmcs = [x for x in all_vlmcs if x.name in aids]
+        print(len(vlmcs))
     else:
         vlmcs = parse_signatures(args, args.db_config)
-
-    
 
     names = [vlmc.name for vlmc in vlmcs]
     meta_data = subset_all_metadata(get_metadata_for(names, args.db_config))

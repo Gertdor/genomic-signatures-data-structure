@@ -10,7 +10,7 @@ import os
 from collections import Counter
 from scipy import stats
 from clustering_genomic_signatures.dbtools.get_signature_metadata import (
-    get_metadata_for,
+    get_metadata_for, get_all_organisms_metadata
 )
 
 from clustering_genomic_signatures.util.parse_distance import add_distance_arguments
@@ -273,7 +273,7 @@ def exact_matches(neighbors, names, run_data):
     ground_truth = all_points[0]
     rest = all_points[1:]
     number_of_matches = [
-        sum(_number_of_equal_elements(ground_truth, current)) for current in rest
+        number_of_equal_elements(ground_truth, current) for current in rest
     ]
 
     print("number of matches: ", number_of_matches)
@@ -402,14 +402,16 @@ def _nearest_neighbor_in_all_trees(neighbor_list, signatures_used):
 
 
 # TODO add a theoretical max (when the genus/family is in the tree)
-def classification_accuracy(names, run_data, db_config_path):
+def classification_accuracy(run_data, db_config_path):
     
     fig = plt.figure()
 
     found_genuses = [genuses for genuses in run_data.classify("genus")]
     found_families = [families for families in run_data.classify("family")]
+    
+    meta_data = get_all_organisms_metadata(db_config_path)
 
-    meta_data = get_metadata_for(names.tolist(), db_config_path)
+    #meta_data = get_metadata_for(names.tolist(), db_config_path)
     signatures_used = run_data.get_signatures_used()
     searched_points = [i for batch in signatures_used for i in batch[1]]
 
@@ -417,13 +419,11 @@ def classification_accuracy(names, run_data, db_config_path):
     true_families = [meta_data[point]["family"] for point in searched_points]
 
     genus_matches = [
-        sum(_number_of_equal_elements(current_genuses, true_genuses))
-        / len(current_genuses)
+        number_of_equal_elements(current_genuses, true_genuses)/len(current_genuses)
         for current_genuses in found_genuses
     ]
     family_matches = [
-        sum(_number_of_equal_elements(current_families, true_families))
-        / len(current_families)
+        number_of_equal_elements(current_families, true_families)/len(current_families)
         for current_families in found_families
     ]
     values = genus_matches + family_matches
@@ -556,18 +556,18 @@ if args.boxplots:
 if args.acc_to_dist:
     plot_dist_calc_to_distance(run_data, False)
 
+if args.classification_accuracy:
+    classification_accuracy(run_data, db_config_path)
+
 if (
     args.bio_accuracy
     or args.dist_to_match
     or args.exact_matches
     or args.fn_dist_to_match
-    or args.classification_accuracy
 ):
 
     with open(args.neighbor_orders, "rb") as f:
         (neighbors, names) = pickle.load(f)
-    if args.classification_accuracy:
-        classification_accuracy(names, run_data, db_config_path)
 
     if args.fn_dist_to_match:
         plot_FN_dist_to_match(args, neighbors, names, run_data)
@@ -582,4 +582,5 @@ if (
         plot_signature_dist_to_match(neighbors, names, run_data)
 
 plt.style.use("seaborn-whitegrid")
-#plt.show()
+if args.save_dir is not None:
+    plt.show()
