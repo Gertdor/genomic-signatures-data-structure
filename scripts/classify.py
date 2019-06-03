@@ -1,4 +1,6 @@
 import argparse
+import pickle
+import time
 
 from os import listdir
 from os.path import isfile, join
@@ -18,46 +20,55 @@ from clustering_genomic_signatures.signature import VLMC
 from dataStructures.VPTree import VPTree, VPTreeNode
 from dataStructures.VLMCElement import VPTreeVLMC
 from util.NN_data import NNData
-from util.splitElements import split_elements
 from clustering_genomic_signatures.dbtools.get_signature_metadata import (
     get_metadata_for,
 )
-
+from julia import Main, PstClassifier
 
 def create_signatures(args):
     if isfile(args.input):
         files = [args.input]
     else:
-        files = [f for f in listdir(args.input) if isfile(f)]
+        files = [join(args.input,f) for f in listdir(args.input)]
 
     sequences = [SeqIO.parse(fna_file, "fasta") for fna_file in files]
     sequences = [
-        (name, str(value.seq)) for name, s in zip(files, sequences) for value in s
+        [(name, str(value.seq)) for value in s] for name, s in zip(files, sequences)
     ]
-    VLMCParseTree = VLMC.train_multiple(
-        sequences, args.max_depth, args.min_count, args.VLMC_free_parameters
-    )
 
-    VLMCs = [
+    total_len = sum(len(l) for l in sequences)
+    print(total_len)
+    
+    VLMCParseTrees = []
+    for i,sequence in enumerate(sequences):
+        if(not i%10):
+            print("files completed: " + str(i))
+        VLMCParseTrees.append(VLMC.train_multiple(
+            sequence, args.max_depth, args.min_count, args.VLMC_free_parameters
+        ))
+
+    VLMCs = [[
         VLMC.from_tree(tree.split("\n"), name=name) for name, tree in VLMCParseTree
-    ]
-    return VLMCs
+    ] for VLMCParseTree in VLMCParseTrees]
+    return (files,VLMCs)
 
 
-parser = argparse.ArgumentParser(description="parser for classifcation algorithm")
+parser = argparse.ArgumentParser(description="parser for classification algorithm")
 
 parser.add_argument(
     "--tree", help="Path to the pickled vantage point tree", required=True
 )
-parser.add_argument("--input", help="path to input file or folder", required=True)
 parser.add_argument(
-    "--min_count", type=int, default=10, help="minimum frequency of kmer"
+    "--input", help="path to input file or folder", required=True
+)
+parser.add_argument(
+    "--min_count", type=int, default=4, help="minimum frequency of kmer"
 )
 parser.add_argument(
     "--VLMC_free_parameters", default=100, type=int, help="number of parameters of VLMC"
 )
 parser.add_argument(
-    "--max_depth", default=15, type=int, help="maximum branch depth of VLMC"
+    "--max_depth", default=5, type=int, help="maximum branch depth of VLMC"
 )
 parser.add_argument("-k", default=1, type=int, help="number of neighbors to find")
 parser.add_argument(
@@ -68,7 +79,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--rank",
-    defulat="genus",
+    default="genus",
     choices=["order", "family", "genus", "species"],
     help="at which taxonomic rank should the classification be made?",
 )
@@ -90,27 +101,45 @@ add_parse_signature_args(parser)
 add_distance_arguments(parser)
 
 args = parser.parse_args()
-
 tree = VPTree.load(args.tree)
 
-signatures = create_signatures(args)
+print(args.o)
+
+start = time.time()
+names, signatures_list = create_signatures(args)
+
+end_seq_time = time.time()
+print("it took " + str(end_seq_time-start) + " to generate sequences")
 
 dist_fun = parse_distance_method(args)
 args.distance_function = "gc-content"
 fast_dist = parse_distance_method(args)
 
-VPTreeElements = [
+VPTreeElements_list = [[
     VPTreeVLMC(signature, dist_fun, i, fast_dist)
     for i, signature in enumerate(signatures)
-]
+] for signatures in signatures_list]
 
-NNS = [
-    tree.nearest_neighbor(element, args.k, args.greedy_factor, args.no_gc_prune)
-    for element in VPTreeElements
-]
+done_VLMC_generate = time.time()
+print("it took " + str(done_VLMC_generate - end_seq_time) + " to create tree elements")
 
-classification = [(NN.classify(args.rank)) for NN in NNS]
+all_NNS = []
+
+for i,VPTreeElements in enumerate(VPTreeElements_list):
+    if(not i%10):
+        print("number of files classified: " + str(i))
+    all_NNS.append([
+        tree.nearest_neighbor(element, args.k, args.greedy_factor, args.no_gc_prune)
+        for element in VPTreeElements
+    ])
+
+classification = {name:[(NN.classify(args.rank)) for NN in NNS] for name, NNS in zip(names,all_NNS)}
+
+done_classify = time.time()
+
+print("it took " + str(done_classify - done_VLMC_generate) + " to classify vlmc")
+
 with open(args.o, "wb") as f:
-    pickle.dump(classifcation, f)
+    pickle.dump(classification, f)
 
 print("wrote data to: " + args.o)
