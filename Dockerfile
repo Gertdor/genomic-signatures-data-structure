@@ -5,7 +5,7 @@ RUN apt-get update -y && apt-get install -y \
     libblas-dev \
     liblapack-dev
 
-RUN useradd -ms /bin/bash genomicsignatures -u 1000
+RUN useradd -ms /bin/bash genomicsignatures -u 124647
 USER genomicsignatures
 
 # Install julia classifier
@@ -23,7 +23,7 @@ COPY --chown=genomicsignatures ./clustering-genomic-signatures-private/PstClassi
 RUN julia -e 'using Pkg; Pkg.develop(PackageSpec(path="/home/genomicsignatures/julia/LazySuffixTrees.jl"))' && \
     julia -e 'using Pkg; Pkg.develop(PackageSpec(path="/home/genomicsignatures/julia/PstClassifier.jl"))' && \
     julia -e 'using Pkg; Pkg.add("PyCall")' &&  \
-    julia --optimize=3 -e 'using PstClassifier'
+    julia --optimize=3 -e 'using PstClassifier' 
 
 
 RUN mkdir /home/genomicsignatures/genomic-signatures-data-structures
@@ -35,10 +35,13 @@ COPY --chown=genomicsignatures clustering-genomic-signatures-private clustering-
 COPY --chown=genomicsignatures gs-data-structures gs-data-structures
 
 COPY --chown=genomicsignatures Makefile .
-COPY --chown=genomicsignatures Pipfile .
-COPY --chown=genomicsignatures Pipfile.lock .
+COPY --chown=genomicsignatures py37Pipfile Pipfile
+#COPY --chown=genomicsignatures Pipfile.lock .
 
 ENV PATH "/home/genomicsignatures/.local/bin:$PATH"
 
 RUN pip install pipenv --user
-RUN pipenv install --dev --deploy --ignore-pipfile
+RUN pipenv install numpy cython --skip-lock
+RUN pipenv install
+
+CMD pipenv run python scripts/classify.py --input scripts/seq_small --greedy_factor 2.5 --one_class --tree scripts/tree.pickle -o scripts/classification_480

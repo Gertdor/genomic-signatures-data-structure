@@ -4,6 +4,7 @@ src
 trees
 clustering
 clustering-genomic-signatures-private/neo4j
+clustering-genomic-signatures-private/data
 distances
 scripts/cache-directory
 signatures/

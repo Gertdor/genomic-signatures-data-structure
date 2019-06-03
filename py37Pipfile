@@ -13,7 +13,6 @@ clustering-genomic-signatures = {editable = true,path = "./clustering-genomic-si
 gs-data-structures = {editable = true,path = "./gs-data-structures"}
 biopython = "*"
 ete3 = "*"
-cython = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
