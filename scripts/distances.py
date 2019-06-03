@@ -141,7 +141,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-vlmcs = parse_signatures(args, "db_config.json")
+vlmcs = parse_signatures(args, "../settings/db_config.json")
 
 print("length", len(vlmcs))
 

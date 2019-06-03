@@ -422,6 +422,7 @@ def classification_accuracy(run_data, db_config_path):
         number_of_equal_elements(current_genuses, true_genuses)/len(current_genuses)
         for current_genuses in found_genuses
     ]
+    print(genus_matches)
     family_matches = [
         number_of_equal_elements(current_families, true_families)/len(current_families)
         for current_families in found_families
@@ -441,12 +442,13 @@ def classification_accuracy(run_data, db_config_path):
         fig.savefig(os.path.join(args.save_dir,"Classification_acc_bar.png"),format="png")
         fig.savefig(os.path.join(args.save_dir,"Classification_acc_bar.pdf"),format="pdf")
 
-
+# got a bit broken after chaning how meta data is stored
 def _nearest_neighbor_in_tree(neighbor_array, tree, points):
     number_of_elements = len(neighbor_array[0])
     elements_in_tree = np.zeros(number_of_elements)
     neighbors = []
-
+    import pdb
+    pdb.set_trace() 
     for elem in tree:  # Want the ones not in the tree still to be 0
         elements_in_tree[elem] = 1
 
@@ -518,7 +520,7 @@ add_distance_arguments(parser)
 
 args = parser.parse_args()
 
-db_config_path = "db_config.json"
+db_config_path = "../settings/db_config.json"
 
 if args.test_all:
     with open("data/test_sets/virus_gc_norm.pickle", "rb") as f:
