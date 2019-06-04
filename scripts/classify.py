@@ -24,33 +24,42 @@ from clustering_genomic_signatures.dbtools.get_signature_metadata import (
     get_metadata_for,
 )
 from julia import Main, PstClassifier
+import sys
 
-def create_signatures(args):
+
+def get_files(args):
     if isfile(args.input):
         files = [args.input]
     else:
         files = [join(args.input,f) for f in listdir(args.input)]
 
-    sequences = [SeqIO.parse(fna_file, "fasta") for fna_file in files]
-    sequences = [
-        [(name, str(value.seq)) for value in s] for name, s in zip(files, sequences)
+    return(files)
+
+
+def NN_search_on_file(fna_file, dist_fun, fast_dist):
+    
+    sequences = SeqIO.parse(fna_file, "fasta")
+    sequences = [(fna_file, str(value.seq)) for value in sequences]
+
+    VLMCParseTree = VLMC.train_multiple(
+        sequences, args.max_depth, args.min_count, args.VLMC_free_parameters
+    )
+     
+    VLMCs = [
+        VLMC.from_tree(tree.split("\n"), name=name) for name, tree in VLMCParseTree
     ]
 
-    total_len = sum(len(l) for l in sequences)
-    print(total_len)
+    VPTreeElements = [
+        VPTreeVLMC(signature, dist_fun, i, fast_dist)
+        for i, signature in enumerate(VLMCs)
+    ]
     
-    VLMCParseTrees = []
-    for i,sequence in enumerate(sequences):
-        if(not i%10):
-            print("files completed: " + str(i))
-        VLMCParseTrees.append(VLMC.train_multiple(
-            sequence, args.max_depth, args.min_count, args.VLMC_free_parameters
-        ))
+    NNS = [
+        tree.nearest_neighbor(element, args.k, args.greedy_factor, args.no_gc_prune)
+        for element in VPTreeElements
+    ]
 
-    VLMCs = [[
-        VLMC.from_tree(tree.split("\n"), name=name) for name, tree in VLMCParseTree
-    ] for VLMCParseTree in VLMCParseTrees]
-    return (files,VLMCs)
+    return NNS
 
 
 parser = argparse.ArgumentParser(description="parser for classification algorithm")
@@ -103,43 +112,30 @@ add_distance_arguments(parser)
 args = parser.parse_args()
 tree = VPTree.load(args.tree)
 
-print(args.o)
-
-start = time.time()
-names, signatures_list = create_signatures(args)
-
-end_seq_time = time.time()
-print("it took " + str(end_seq_time-start) + " to generate sequences")
+fna_files = get_files(args)
 
 dist_fun = parse_distance_method(args)
 args.distance_function = "gc-content"
 fast_dist = parse_distance_method(args)
 
-VPTreeElements_list = [[
-    VPTreeVLMC(signature, dist_fun, i, fast_dist)
-    for i, signature in enumerate(signatures)
-] for signatures in signatures_list]
+start_time = time.time()
 
-done_VLMC_generate = time.time()
-print("it took " + str(done_VLMC_generate - end_seq_time) + " to create tree elements")
-
-all_NNS = []
-
-for i,VPTreeElements in enumerate(VPTreeElements_list):
+sequences_classified = 0
+classifications = {}
+for i,fna_file in enumerate(fna_files):
     if(not i%10):
-        print("number of files classified: " + str(i))
-    all_NNS.append([
-        tree.nearest_neighbor(element, args.k, args.greedy_factor, args.no_gc_prune)
-        for element in VPTreeElements
-    ])
+        print("time elapsed: " + str(start_time - time.time()))
+        print("sequences classified so far: " + str(sequences_classified))
+        print(i)
 
-classification = {name:[(NN.classify(args.rank)) for NN in NNS] for name, NNS in zip(names,all_NNS)}
+    NNS = NN_search_on_file(fna_file, dist_fun, fast_dist)
+    sequences_classified+=len(NNS)
 
-done_classify = time.time()
-
-print("it took " + str(done_classify - done_VLMC_generate) + " to classify vlmc")
+    classifications[fna_file] = [nn.classify(args.rank) for nn in NNS]
 
 with open(args.o, "wb") as f:
-    pickle.dump(classification, f)
+    pickle.dump(classifications, f)
 
+print("total number of sequences: " + str(sequences_classified))
+print("total time taken " + str(start_time-time.time()))
 print("wrote data to: " + args.o)
